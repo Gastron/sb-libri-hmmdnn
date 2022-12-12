@@ -20,7 +20,9 @@ echo "SIL" > ${tmpdir}/silence_phones.txt
 echo "SPN" >> ${tmpdir}/silence_phones.txt
 #echo "NSN" >> ${tmpdir}/silence_phones.txt
 sort -uo ${tmpdir}/silence_phones.txt{,}
-echo "$oov_entry SPN" >> ${tmpdir}/lexicon.txt
+echo "$oov_entry SPN" > ${tmpdir}/lexicon.txt
+echo "-pau- SIL" >> ${tmpdir}/lexicon.txt
+echo "<unk> SPN" >> ${tmpdir}/lexicon.txt
 
 echo "SIL" > ${tmpdir}/optional_silence.txt
 

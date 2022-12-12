@@ -5,9 +5,12 @@ module load variKN
 module load sentencepiece
 module load flac
 module load sox
+source speechbrain/speechbrain-env/bin/activate
+export PYTHONPATH=$PYTHONPATH:pychain/
+export PYTHONPATH=$PYTHONPATH:"$PWD/local/python_lib/"
 
 export PATH=$PWD/utils:$PATH
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD:pychain/openfst-1.7.5/lib/
 
 export LC_ALL=C
 

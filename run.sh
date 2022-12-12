@@ -54,16 +54,12 @@ if [ $stage -le 4 ]; then
 
   utils/combine_data.sh \
     data/train_960 data/train_clean_460 data/train_other_500
+
+  utils/combine_data.sh \
+    data/dev_all data/dev_clean/ data/dev_other
 fi
 
 if [ $stage -le 5 ]; then
-  local/prepare_lexicon.sh \
-    --extra_texts "data/dev_clean/text data/dev_other/text" \
-    data/train_960/ data/local/dict_train_960 data/lang_train
-fi
-
-
-if [ $stage -le 7 ]; then
   # Make some small data subsets for early system-build stages.  Note, there are 29k
   # utterances in the train_clean_100 directory which has 100 hours of data.
   # For the monophone stages we select the shortest utterances, which should make it
@@ -72,6 +68,26 @@ if [ $stage -le 7 ]; then
   utils/subset_data_dir.sh --shortest data/train_clean_100 2000 data/train_2kshort
   utils/subset_data_dir.sh data/train_clean_100 5000 data/train_5k
   utils/subset_data_dir.sh data/train_clean_100 10000 data/train_10k
+fi
+
+if [ $stage -le 6 ]; then
+  local/prepare_lexicon.sh \
+    --extra_texts "data/dev_clean/text data/dev_other/text" \
+    data/train_960/ data/local/dict_train_960 data/lang_train
+fi
+
+if [ $stage -le 7 ]; then
+  if [ ! -d subword-kaldi ]; then
+    echo "Need subword-kaldi, cloning"
+    git clone https://github.com/aalto-speech/subword-kaldi
+  fi
+
+  local/train_lm.sh \
+    --BPE_units 5000 \
+    --stage 0 \
+    --traindata data/train_960 \
+    --validdata data/dev_all \
+    train data/lang_bpe.5000.varikn
 fi
 
 if [ $stage -le 8 ]; then
@@ -144,28 +160,83 @@ if [ $stage -le 18 ]; then
 
 fi
 
-echo "Done training many GMMs"
-exit
-
 if [ $stage -le 19 ]; then
-  # decode using the tri6b model
-  utils/mkgraph.sh data/lang_test_tgsmall \
-                   exp/tri6b exp/tri6b/graph_tgsmall
-  for test in test_clean test_other dev_clean dev_other; do
-      steps/decode_fmllr.sh --nj 20 --cmd "$decode_cmd" \
-                            exp/tri6b/graph_tgsmall data/$test exp/tri6b/decode_tgsmall_$test
-      steps/lmrescore.sh --cmd "$decode_cmd" data/lang_test_{tgsmall,tgmed} \
-                         data/$test exp/tri6b/decode_{tgsmall,tgmed}_$test
-      steps/lmrescore_const_arpa.sh \
-        --cmd "$decode_cmd" data/lang_test_{tgsmall,tglarge} \
-        data/$test exp/tri6b/decode_{tgsmall,tglarge}_$test
-      steps/lmrescore_const_arpa.sh \
-        --cmd "$decode_cmd" data/lang_test_{tgsmall,fglarge} \
-        data/$test exp/tri6b/decode_{tgsmall,fglarge}_$test
-  done
+  $basic_cmd --mem 16G exp/tri6b/graph_bpe.5000.varikn/log/mkgraph.log utils/mkgraph.sh \
+    data/lang_bpe.5000.varikn/ exp/tri6b/ exp/tri6b/graph_bpe.5000.varikn
+  steps/decode_fmllr.sh --cmd "$basic_cmd" --nj 8 \
+    exp/tri6b/graph_bpe.5000.varikn data/dev_clean exp/tri6b/decode_dev_clean_bpe.5000.varikn
+  steps/decode_fmllr.sh --cmd "$basic_cmd" --nj 8 \
+    exp/tri6b/graph_bpe.5000.varikn data/dev_other exp/tri6b/decode_dev_other_bpe.5000.varikn
 fi
 
 if [ $stage -le 20 ]; then
-  # train and test nnet3 tdnn models on the entire data with data-cleaning.
-  local/chain/run_tdnn.sh # set "--stage 11" if you have already run local/nnet3/run_tdnn.sh
+  steps/align_fmllr.sh --nj 100 --cmd "$train_cmd" \
+    data/train_960 data/lang_train exp/tri6b exp/tri6b_ali_960
+  steps/align_fmllr.sh --nj 8 --cmd "$train_cmd" \
+    data/dev_all data/lang_train exp/tri6b exp/tri6b_ali_dev_all
+fi
+
+if [ $stage -le 21 ]; then
+  # Create a version of the lang/ directory that has one state per phone in the
+  # topo file. [note, it really has two states.. the first one is only repeated
+  # once, the second one has zero or more repeats.]
+  if [ -d data/lang_chain ]; then
+    if [ data/lang_chain/L.fst -nt data/lang_train/L.fst ]; then
+      echo "$0: data/lang_chain already exists, not overwriting it; continuing"
+    else
+      echo "$0: data/lang_chain already exists and seems to be older than data/lang_train..."
+      echo " ... not sure what to do. Exiting."
+      exit 1;
+    fi
+  else
+    cp -r data/lang_train data/lang_chain
+    silphonelist=$(cat data/lang_chain/phones/silence.csl) || exit 1;
+    nonsilphonelist=$(cat data/lang_chain/phones/nonsilence.csl) || exit 1;
+    # Use our special topology... note that later on may have to tune this
+    # topology.
+    steps/nnet3/chain/gen_topo.py $nonsilphonelist $silphonelist >data/lang_chain/topo
+  fi
+fi
+
+if [ $stage -le 22 ]; then
+  local/chain/build_new_tree.sh exp/chain/tree
+fi
+
+if [ $stage -le 23 ]; then
+  srun --mem 24G --time 1-12:0:0 -c8 \
+    local/chain/make_shards.py 100 shards/train_960 \
+      --num-proc 8 \
+      --wavscp data/train_960/split100/JOB/wav.scp \
+      --text data/train_960/split100/JOB/text \
+      --aliark "gunzip -c exp/chain/tree/ali.JOB.gz | ali-to-pdf exp/chain/tree/final.mdl ark:- ark:- |"
+
+  srun --mem 6G --time 12:0:0 -c2 \
+    local/chain/make_shards.py 8 shards/dev_all \
+      --num-proc 2 \
+      --wavscp data/dev_all/split8/JOB/wav.scp \
+      --text data/dev_all/split8/JOB/text \
+      --aliark "gunzip -c exp/chain/tree/ali.valid.JOB.gz | ali-to-pdf exp/chain/tree/final.mdl ark:- ark:- |"
+fi
+
+if [ $stage -le 24 ]; then
+  local/chain/prepare_graph_clustered.sh
+fi
+
+if [ $stage -le 25 ]; then
+  local/chain/run_training.sh
+fi
+
+if [ $stage -le 26 ]; then
+  $basic_cmd --mem 16G exp/chain/graph/graph_bpe.5000.varikn/log/mkgraph.log utils/mkgraph.sh \
+    --self-loop-scale 1.0 \
+    data/lang_bpe.5000.varikn/ exp/chain/tree exp/chain/graph/graph_bpe.5000.varikn
+fi
+
+if [ $stage -le 27 ]; then
+  local/chain/decode.sh --datadir data/dev_clean \
+    --acwt 1.0 --post-decode-acwt 10.0 \
+    --decodedir "exp/chain/New-CRDNN-J/2602-2256units/decode_dev_clean_bpe.5000.varikn_acwt1.0"
+  local/chain/decode.sh --datadir data/dev_other/ \
+    --acwt 1.0 --post-decode-acwt 10.0 \
+    --decodedir "exp/chain/New-CRDNN-J/2602-2256units/decode_dev_other_bpe.5000.varikn_acwt1.0"
 fi

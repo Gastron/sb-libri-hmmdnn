@@ -12,7 +12,6 @@ parser.add_argument("--spoken-noise", help="Phone for spoken noise", default="SP
 args = parser.parse_args()
 
 translation_mapping = {
-  "'": "",
 }
 translation = str.maketrans(translation_mapping)
 
