@@ -15,11 +15,20 @@ fi
 
 if [ $stage -le 3 ]; then
   local/attention/run_training.sh \
-    --hparams hyperparams/attention/CRDNN-E-contd.yaml
+    --hparams hyperparams/attention/CRDNN-E-contd-2.yaml
 fi
 
 if [ $stage -le 4 ]; then
+  local/attention/run_test.sh \
+    --hparams hyperparams/attention/CRDNN-E-contd-2.yaml \
+    --datadir "data/dev_clean"
+  local/attention/run_test.sh \
+    --hparams hyperparams/attention/CRDNN-E-contd-2.yaml \
+    --datadir "data/dev_other"
+fi
+
+if [ $stage -le 5 ]; then
   local/attention/run_training.sh \
     --py_script local/attention/sb_train_attn_mwer.py \
-    --hparams hyperparams/attention/mwer/CRDNN-E-MWER.yaml
+    --hparams hyperparams/attention/mwer/CRDNN-E-MWER-contd-2.yaml
 fi

@@ -198,6 +198,12 @@ if [ $stage -le 25 ]; then
     --treedir "exp/phoneme/chain/tree/"
 fi
 
+if [ $stage -le 26 ]; then
+  local/chain/run_training.sh \
+    --hparams "hyperparams/chain/New-CRDNN-J-phoneme-contd.yaml --expname libriphoneme" \
+    --treedir "exp/phoneme/chain/tree/"
+fi
+
 #if [ $stage -le 26 ]; then
 #  $basic_cmd --mem 16G exp/phoneme/chain//graph/graph_bpe.5000.varikn/log/mkgraph.log utils/mkgraph.sh \
 #    --self-loop-scale 1.0 \

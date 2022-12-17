@@ -240,3 +240,19 @@ if [ $stage -le 27 ]; then
     --acwt 1.0 --post-decode-acwt 10.0 \
     --decodedir "exp/chain/New-CRDNN-J/2602-2256units/decode_dev_other_bpe.5000.varikn_acwt1.0"
 fi
+
+if [ $stage -le 28 ]; then
+  local/chain/run_training.sh \
+    --hparams "hyperparams/chain/New-CRDNN-J-contd.yaml"
+fi
+
+if [ $stage -le 29 ]; then
+  local/chain/decode.sh --datadir data/dev_clean \
+    --hparams "hyperparams/chain/New-CRDNN-J-contd.yaml" \
+    --acwt 1.0 --post-decode-acwt 10.0 \
+    --decodedir "exp/chain/New-CRDNN-J-contd/2602-2256units/decode_dev_clean_bpe.5000.varikn_acwt1.0"
+  local/chain/decode.sh --datadir data/dev_other/ \
+    --hparams "hyperparams/chain/New-CRDNN-J-contd.yaml" \
+    --acwt 1.0 --post-decode-acwt 10.0 \
+    --decodedir "exp/chain/New-CRDNN-J-contd/2602-2256units/decode_dev_other_bpe.5000.varikn_acwt1.0"
+fi

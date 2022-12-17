@@ -171,9 +171,12 @@ def numfsts_to_local_tmp(fstdir, tmpdir):
         with open(scpfile) as fin:
             for line in fin:
                 uttid, data = line.strip().split()
+                # HACK: WebDataset cannot handle periods in uttids:
+                uttid = uttid.replace(".", "")
                 arkpath, offset = data.split(":")
-                newpath = arkpath.replace(str(fstdir), str(tmpdir))
-                numfsts[uttid] = (newpath, int(offset))
+                arkpath = pathlib.Path(arkpath)
+                newpath = tmpdir / arkpath.name
+                numfsts[uttid] = (str(newpath), int(offset))
     return numfsts
 
 def dataio_prepare(hparams, numfsts):
@@ -226,6 +229,9 @@ def dataio_prepare(hparams, numfsts):
 
 
 if __name__ == "__main__":
+    import os
+    print("SLURM_STEP_GPUS", os.environ.get("SLURM_STEP_GPUS"))
+    print("SLURM_JOB_GPUS", os.environ.get("SLURM_JOB_GPUS"))
 
     # Reading command line arguments
     hparams_file, run_opts, overrides = sb.parse_arguments(sys.argv[1:])

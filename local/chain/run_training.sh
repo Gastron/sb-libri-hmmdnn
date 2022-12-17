@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cmd="srun --mem 24G --time 2-0:0:0 -c5 --gres=gpu:1 --constraint volta -p dgx-spa,gpu,gpu-nvlink"
+cmd="srun --mem 32G --time 2-0:0:0 -c5 --gres=gpu:1 --constraint volta -p dgx-spa,dgx-common,gpu,gpu-nvlink"
 hparams="hyperparams/chain/New-CRDNN-J.yaml"
 treedir="exp/chain/tree/"
 py_script="local/chain/sb-train-mtl.py"

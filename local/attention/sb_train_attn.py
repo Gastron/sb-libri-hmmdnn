@@ -210,6 +210,7 @@ class ASR(sb.Brain):
             self.cer_metric = self.hparams.cer_computer()
             self.wer_metric = self.hparams.error_rate_computer()
 
+
     def on_stage_end(self, stage, stage_loss, epoch):
         """Gets called at the end of an epoch.
 
@@ -367,6 +368,9 @@ def dataio_prepare(hparams):
 
 
 if __name__ == "__main__":
+    import os
+    print("SLURM_STEP_GPUS", os.environ.get("SLURM_STEP_GPUS"))
+    print("SLURM_JOB_GPUS", os.environ.get("SLURM_JOB_GPUS"))
 
     # Reading command line arguments
     hparams_file, run_opts, overrides = sb.parse_arguments(sys.argv[1:])

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cmd="srun --mem 24G --time 2-0:0:0 -c5 --gres=gpu:1 --constraint volta -p dgx-spa,gpu,gpu-nvlink"
+cmd="srun --mem 24G --time 1:0:0 -c5 --gres=gpu:1 --constraint volta -p dgx-spa,gpu,gpu-nvlink,gpushort"
 hparams="hyperparams/attention/CRDNN-E.yaml"
 py_script="local/attention/sb_test_only_attn.py"
 datadir="data/dev_clean"
