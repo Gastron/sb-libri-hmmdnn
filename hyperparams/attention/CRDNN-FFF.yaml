@@ -14,7 +14,7 @@ trainshards: !apply:glob.glob ["./shards/train_960/shard-000*.tar"]
 validshards: !apply:glob.glob ["./shards/dev_all/shard-000*.tar"]
 # data_folder_rirs: ./augmentation_data # noise/ris dataset will automatically be downloaded here
 num_units: 5000
-output_folder: !ref exp/attention/CRDNN-FF-4/<seed>-<num_units>units
+output_folder: !ref exp/attention/CRDNN-FFF-1-2/<seed>-<num_units>units
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
 tokenizer_path: !ref exp/lm/train_varikn.bpe<num_units>.d0.0001/bpe.<num_units>.model
@@ -34,13 +34,13 @@ n_mels: 40
 grad_accumulation_factor: 1
 
 # Training parameters
-number_of_epochs: 60
+number_of_epochs: 100
 number_of_ctc_epochs: 15
 dynamic_batch_kwargs:
     max_sample_len: !ref <sample_rate> * 60
     sampler_kwargs:
-        target_batch_numel: !ref <sample_rate> * 120 # 16000*120=2minutes
-        max_batch_numel: !ref <sample_rate> * 186
+        target_batch_numel: !ref <sample_rate> * 180 # 16000*120=2minutes
+        max_batch_numel: !ref <sample_rate> * 248
     len_key: 'wav'
 train_loader_kwargs:
     num_workers: 4
@@ -50,7 +50,10 @@ validbatchsize: 4
 ctc_weight: 0.5
 ckpt_interval_minutes: -1 # save checkpoint every N min
 label_smoothing: 0.1
-lr: 0.0001
+label_smoothing_epochs: 75
+
+initial_lr: 0.000001
+top_lr: 0.0001
 
 # Model parameters
 activation: !name:torch.nn.LeakyReLU
@@ -67,7 +70,7 @@ rnn_bidirectional: True
 dnn_blocks: 1
 dnn_neurons: 512
 emb_size: 128
-dec_neurons: 1024
+dec_neurons: 2048
 dec_layers: 1
 output_neurons: !ref <num_units>  #Number of tokens (same as LM)
 
@@ -258,11 +261,16 @@ test_search: !new:speechbrain.decoders.S2SRNNBeamSearcher
     ctc_weight: !ref <ctc_weight_decode>
     temperature: !ref <temperature>
 
-lr_annealing: !new:local.NoSchedule
-    lr: !ref <lr>
+lr_annealing: !new:local.NewBobSchedulerWithWarmup
+    initial_value: !ref <initial_lr>
+    highest_value: !ref <top_lr>
+    warmup_epochs: 10
+    improvement_threshold: 0.0025
+    annealing_factor: 0.8
+    patient: 0
 
 opt_class: !name:torch.optim.Adam
-      lr: !ref <lr> 
+      lr: !ref <initial_lr> 
 
 # Functions that compute the statistics to track during the validation step.
 error_rate_computer: !name:speechbrain.utils.metric_stats.ErrorRateStats
@@ -278,4 +286,5 @@ checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
     recoverables:
         model: !ref <model>
         normalizer: !ref <normalize>
+        annealing: !ref <lr_annealing>
         counter: !ref <epoch_counter>

@@ -219,9 +219,12 @@ def numfsts_to_local_tmp(fstdir, tmpdir):
         with open(scpfile) as fin:
             for line in fin:
                 uttid, data = line.strip().split()
+                # HACK: WebDataset cannot handle periods in uttids:
+                uttid = uttid.replace(".", "")
                 arkpath, offset = data.split(":")
-                newpath = arkpath.replace(str(fstdir), str(tmpdir))
-                numfsts[uttid] = (newpath, int(offset))
+                arkpath = pathlib.Path(arkpath)
+                newpath = tmpdir / arkpath.name
+                numfsts[uttid] = (str(newpath), int(offset))
     return numfsts
 
 def dataio_prepare(hparams, numfsts):
@@ -274,6 +277,9 @@ def dataio_prepare(hparams, numfsts):
 
 
 if __name__ == "__main__":
+    import os
+    print("SLURM_STEP_GPUS", os.environ.get("SLURM_STEP_GPUS"))
+    print("SLURM_JOB_GPUS", os.environ.get("SLURM_JOB_GPUS"))
 
     # Reading command line arguments
     hparams_file, run_opts, overrides = sb.parse_arguments(sys.argv[1:])
@@ -326,11 +332,14 @@ if __name__ == "__main__":
     # necessary to update the parameters of the model. Since all objects
     # with changing state are managed by the Checkpointer, training can be
     # stopped at any point, and will be resumed on next call.
+    train_loader_kwargs = hparams["train_loader_kwargs"]
+    train_loader_kwargs.setdefault("batch_size", None)
     asr_brain.fit(
         asr_brain.hparams.epoch_counter,
         datasets["train"],
         datasets["valid"],
-        train_loader_kwargs = hparams["train_loader_kwargs"]
+        train_loader_kwargs = train_loader_kwargs,
+        valid_loader_kwargs = hparams.get("valid_loader_kwargs", {"batch_size": None})
     )
     
     if "prior_file" in hparams:
@@ -339,9 +348,11 @@ if __name__ == "__main__":
             kwargs["max_key"] = hparams["test_max_key"]
         elif "test_min_key" in hparams:
             kwargs["min_key"] = hparams["test_min_key"]
+        prior_loader_kwargs = hparams["prior_loader_kwargs"]
+        prior_loader_kwargs.setdefault("batch_size", None)
         prior = asr_brain.estimate_prior_empirical(
                 datasets["train"], 
-                loader_kwargs=hparams["prior_loader_kwargs"],
+                loader_kwargs=prior_loader_kwargs,
                 **kwargs
         )
         torch.save(prior, hparams["prior_file"])

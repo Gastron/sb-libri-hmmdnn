@@ -34,7 +34,7 @@ n_mels: 40
 grad_accumulation_factor: 1
 
 # Training parameters
-number_of_epochs: 100
+number_of_epochs: 60
 number_of_ctc_epochs: 15
 dynamic_batch_kwargs:
     max_sample_len: !ref <sample_rate> * 60

@@ -154,16 +154,11 @@ class ASR(sb.Brain):
         tokens_eos, tokens_eos_lens = self.prepare_tokens(
             stage, batch.tokens_eos
         )
-        current_epoch = self.hparams.epoch_counter.current
-        if current_epoch <= getattr(self.hparams, "label_smoothing_epochs", 999999999):
-            label_smoothing = self.hparams.label_smoothing
-        else:
-            label_smoothing = 0.0
         loss = sb.nnet.losses.nll_loss(
             log_probabilities=predictions["seq_logprobs"],
             targets=tokens_eos,
             length=tokens_eos_lens,
-            label_smoothing=label_smoothing,
+            label_smoothing=self.hparams.label_smoothing,
         )
 
         # Add ctc loss if necessary. The total cost is a weighted sum of
@@ -196,6 +191,27 @@ class ASR(sb.Brain):
             self.cer_metric.append(batch.__key__, predicted_words, target_words)
 
         return loss
+
+    def fit_batch(self, batch):
+        """Train the parameters given a single batch in input"""
+        # check if we need to switch optimizer
+        # if so change the optimizer from Adam to SGD
+        predictions = self.compute_forward(batch, sb.Stage.TRAIN)
+        loss = self.compute_objectives(predictions, batch, sb.Stage.TRAIN)
+        should_step = self.step % self.grad_accumulation_factor == 0
+        # normalize the loss by gradient_accumulation step
+        (loss / self.grad_accumulation_factor).backward()
+
+        if should_step:
+            # anneal lr every update, first
+            self.hparams.lr_annealing(self.optimizer)
+
+            # gradient clipping & early stop if loss is not fini
+            if self.check_gradients(loss):
+                self.optimizer.step()
+            self.optimizer.zero_grad()
+            self.optimizer_step += 1 
+        return loss.detach().cpu()
 
     def on_stage_start(self, stage, epoch):
         """Gets called at the beginning of each epoch.
@@ -244,12 +260,11 @@ class ASR(sb.Brain):
         if stage == sb.Stage.VALID:
 
             # Update learning rate
-            old_lr, new_lr = self.hparams.lr_annealing(stage_stats["WER"])
-            sb.nnet.schedulers.update_learning_rate(self.optimizer, new_lr)
+            curr_lr = self.hparams.lr_annealing.current_lr
 
             # The train_logger writes a summary to stdout and to the logfile.
             self.hparams.train_logger.log_stats(
-                stats_meta={"epoch": epoch, "lr": old_lr},
+                stats_meta={"epoch": epoch, "lr": curr_lr},
                 train_stats=self.train_stats,
                 valid_stats=stage_stats,
             )
@@ -373,9 +388,6 @@ def dataio_prepare(hparams):
 
 
 if __name__ == "__main__":
-    import os
-    print("SLURM_STEP_GPUS", os.environ.get("SLURM_STEP_GPUS"))
-    print("SLURM_JOB_GPUS", os.environ.get("SLURM_JOB_GPUS"))
 
     # Reading command line arguments
     hparams_file, run_opts, overrides = sb.parse_arguments(sys.argv[1:])

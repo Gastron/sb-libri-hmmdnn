@@ -14,7 +14,7 @@ trainshards: !apply:glob.glob ["./shards/train_960/shard-000*.tar"]
 validshards: !apply:glob.glob ["./shards/dev_all/shard-000*.tar"]
 # data_folder_rirs: ./augmentation_data # noise/ris dataset will automatically be downloaded here
 num_units: 5000
-output_folder: !ref exp/attention/CRDNN-FF-4/<seed>-<num_units>units
+output_folder: !ref exp/attention/CRDNN-FF-10/<seed>-<num_units>units
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
 tokenizer_path: !ref exp/lm/train_varikn.bpe<num_units>.d0.0001/bpe.<num_units>.model
@@ -39,8 +39,8 @@ number_of_ctc_epochs: 15
 dynamic_batch_kwargs:
     max_sample_len: !ref <sample_rate> * 60
     sampler_kwargs:
-        target_batch_numel: !ref <sample_rate> * 120 # 16000*120=2minutes
-        max_batch_numel: !ref <sample_rate> * 186
+        target_batch_numel: !ref <sample_rate> * 80 # 16000*120=2minutes
+        max_batch_numel: !ref <sample_rate> * 124
     len_key: 'wav'
 train_loader_kwargs:
     num_workers: 4
