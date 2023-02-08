@@ -1,9 +1,9 @@
 #!/bin/bash
 
-cmd="srun --mem 32G --time 2-0:0:0 -c7 --gres=gpu:1 --constraint volta -p dgx-spa,gpu,gpu-nvlink"
-hparams="hyperparams/chain/New-CRDNN-J.yaml"
-treedir="exp/chain/tree/"
-py_script="local/chain/sb-train-mtl.py"
+cmd="srun --mem 24G --time 2-0:0 -c5 --gres=gpu:1 --constraint volta -p dgx-spa,gpu,gpu-nvlink"
+hparams="hyperparams/mtl/w2v2-C.yaml"
+treedir="exp/chain/tree2/"
+py_script="local/chain_e2e/sb-train-lfmmi-e2e.py"
 
 . path.sh
 . parse_options.sh

@@ -51,37 +51,29 @@ if [ $stage -le 25 ]; then
   local/chain/run_training.sh \
     --treedir "exp/chain/tree2" \
     --py_script "local/chain/sb-train-mtl-w2v2.py" \
-    --hparams "hyperparams/chain/New-w2w2-F.yaml"
+    --hparams "hyperparams/chain/New-w2w2-F3.yaml"
 fi
 
-exit 
 if [ $stage -le 26 ]; then
   $basic_cmd --mem 16G exp/chain/graph/graph_bpe.5000.varikn/log/mkgraph.log utils/mkgraph.sh \
     --self-loop-scale 1.0 \
-    data/lang_bpe.5000.varikn/ exp/chain/tree exp/chain/graph/graph_bpe.5000.varikn
+    data/lang_bpe.5000.varikn/ exp/chain/tree2 exp/chain/graph2/graph_bpe.5000.varikn
 fi
 
 if [ $stage -le 27 ]; then
   local/chain/decode.sh --datadir data/dev_clean \
     --acwt 1.0 --post-decode-acwt 10.0 \
-    --decodedir "exp/chain/New-CRDNN-J/2602-2256units/decode_dev_clean_bpe.5000.varikn_acwt1.0"
+    --tree exp/chain/tree2 \
+    --graphdir "exp/chain/graph2/graph_bpe.5000.varikn/" \
+    --hparams hyperparams/chain/New-w2w2-F3.yaml \
+    --py_script "local/chain/sb-test-w2v2-mtl-avg.py" \
+    --decodedir "exp/chain/New-W2V2-F3/2602-2240units/decode_dev_clean_bpe.5000.varikn_acwt1.0"
   local/chain/decode.sh --datadir data/dev_other/ \
     --acwt 1.0 --post-decode-acwt 10.0 \
-    --decodedir "exp/chain/New-CRDNN-J/2602-2256units/decode_dev_other_bpe.5000.varikn_acwt1.0"
+    --tree exp/chain/tree2 \
+    --graphdir "exp/chain/graph2/graph_bpe.5000.varikn/" \
+    --hparams hyperparams/chain/New-w2w2-F3.yaml \
+    --py_script "local/chain/sb-test-w2v2-mtl-avg.py" \
+    --decodedir "exp/chain/New-W2V2-F3/2602-2240units/decode_dev_other_bpe.5000.varikn_acwt1.0"
 fi
 
-if [ $stage -le 28 ]; then
-  local/chain/run_training.sh \
-    --hparams "hyperparams/chain/New-CRDNN-J-contd.yaml"
-fi
-
-if [ $stage -le 29 ]; then
-  local/chain/decode.sh --datadir data/dev_clean \
-    --hparams "hyperparams/chain/New-CRDNN-J-contd.yaml" \
-    --acwt 1.0 --post-decode-acwt 10.0 \
-    --decodedir "exp/chain/New-CRDNN-J-contd/2602-2256units/decode_dev_clean_bpe.5000.varikn_acwt1.0"
-  local/chain/decode.sh --datadir data/dev_other/ \
-    --hparams "hyperparams/chain/New-CRDNN-J-contd.yaml" \
-    --acwt 1.0 --post-decode-acwt 10.0 \
-    --decodedir "exp/chain/New-CRDNN-J-contd/2602-2256units/decode_dev_other_bpe.5000.varikn_acwt1.0"
-fi

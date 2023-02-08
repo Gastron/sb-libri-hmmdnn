@@ -100,8 +100,7 @@ if [ $stage -le 10 ]; then
 fi
 
 # NOTE: run run.sh first
-#if [ $stage -le 11 ]; then
-if [ false ]; then
+if [ $stage -le 11 ]; then
   local/chain/decode.sh \
     --stage 2 --posteriors_from "exp/chain/New-CRDNN-J-contd//2602-2256units/decode_dev_clean_bpe.5000.varikn_acwt1.0/" \
     --decodedir "exp/chain/New-CRDNN-J-contd/2602-2256units/decode_dev_clean_3gram_pruned_char_acwt1.0" \
@@ -122,4 +121,30 @@ if [ $stage -le 12 ]; then
     --cmd "$basic_cmd" data/lang_3gram_pruned_char/ data/lang_4gram_char_const \
     data/dev_other exp/chain/New-CRDNN-J-contd/2602-2256units/decode_dev_other_3gram_pruned_char_acwt1.0 \
     exp/chain/New-CRDNN-J-contd/2602-2256units/decode_dev_other_4gram_char_rescored_acwt1.0
+fi
+
+# NOTE: run run.sh first
+#if [ $stage -le 11 ]; then
+if [ $stage -le 13 ]; then
+  local/chain/decode.sh \
+    --datadir "data/test_clean" \
+    --stage 2 --posteriors_from "exp/chain/New-CRDNN-J-contd//2602-2256units/decode_test_clean_bpe.5000.varikn_acwt1.0/" \
+    --decodedir "exp/chain/New-CRDNN-J-contd/2602-2256units/decode_test_clean_3gram_pruned_char_acwt1.0" \
+    --graphdir "exp/chain/graph/graph_3gram_pruned_char" 
+  local/chain/decode.sh \
+    --datadir "data/test_other" \
+    --stage 2 --posteriors_from "exp/chain/New-CRDNN-J-contd/2602-2256units/decode_test_other_bpe.5000.varikn_acwt1.0/" \
+    --decodedir "exp/chain/New-CRDNN-J-contd/2602-2256units/decode_test_other_3gram_pruned_char_acwt1.0" \
+    --graphdir "exp/chain/graph/graph_3gram_pruned_char" 
+fi
+
+if [ $stage -le 14 ]; then
+  steps/lmrescore_const_arpa.sh --scoring-opts "--hyp_filtering_cmd cat" \
+    --cmd "$basic_cmd" data/lang_3gram_pruned_char/ data/lang_4gram_char_const \
+    data/test_clean exp/chain/New-CRDNN-J-contd/2602-2256units/decode_test_clean_3gram_pruned_char_acwt1.0 \
+    exp/chain/New-CRDNN-J-contd/2602-2256units/decode_test_clean_4gram_char_rescored_acwt1.0
+  steps/lmrescore_const_arpa.sh --scoring-opts "--hyp_filtering_cmd cat" \
+    --cmd "$basic_cmd" data/lang_3gram_pruned_char/ data/lang_4gram_char_const \
+    data/test_other exp/chain/New-CRDNN-J-contd/2602-2256units/decode_test_other_3gram_pruned_char_acwt1.0 \
+    exp/chain/New-CRDNN-J-contd/2602-2256units/decode_test_other_4gram_char_rescored_acwt1.0
 fi

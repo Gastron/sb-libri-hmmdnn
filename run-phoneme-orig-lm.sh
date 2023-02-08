@@ -101,3 +101,29 @@ if [ $stage -le 12 ]; then
     data/dev_other exp/phoneme/chain/New-CRDNN-J-contd/2602-2096units/decode_dev_other_phoneme_test_tgmed_acwt1.0 \
     exp/phoneme/chain/New-CRDNN-J-contd/2602-2096units/decode_dev_other_4gram_phoneme_rescored_acwt1.0
 fi
+
+if [ $stage -le 13 ]; then
+  local/chain/decode.sh \
+    --hparams "hyperparams/chain/New-CRDNN-J-phoneme-contd.yaml --expname libriphoneme" \
+    --tree exp/phoneme/chain/tree/ \
+    --datadir "data/test_clean" \
+    --graphdir "exp/phoneme/chain/graph/graph_phoneme_test_tgmed" \
+    --decodedir "exp/phoneme/chain/New-CRDNN-J-contd/2602-2096units/decode_test_clean_phoneme_test_tgmed_acwt1.0" 
+  local/chain/decode.sh \
+    --hparams "hyperparams/chain/New-CRDNN-J-phoneme-contd.yaml --expname libriphoneme" \
+    --tree exp/phoneme/chain/tree/ \
+    --graphdir "exp/phoneme/chain/graph/graph_phoneme_test_tgmed" \
+    --datadir "data/test_other" \
+    --decodedir "exp/phoneme/chain/New-CRDNN-J-contd/2602-2096units/decode_test_other_phoneme_test_tgmed_acwt1.0" 
+fi
+
+if [ $stage -le 14 ]; then
+  steps/lmrescore_const_arpa.sh --scoring-opts "--hyp_filtering_cmd cat" \
+    --cmd "$basic_cmd" data/lang_phoneme_test_tgmed/ data/lang_phoneme_test_fglarge \
+    data/test_clean exp/phoneme/chain/New-CRDNN-J-contd/2602-2096units//decode_test_clean_phoneme_test_tgmed_acwt1.0 \
+    exp/phoneme/chain/New-CRDNN-J-contd/2602-2096units/decode_test_clean_4gram_phoneme_rescored_acwt1.0
+  steps/lmrescore_const_arpa.sh --scoring-opts "--hyp_filtering_cmd cat" \
+    --cmd "$basic_cmd" data/lang_phoneme_test_tgmed/ data/lang_phoneme_test_fglarge \
+    data/test_other exp/phoneme/chain/New-CRDNN-J-contd/2602-2096units/decode_test_other_phoneme_test_tgmed_acwt1.0 \
+    exp/phoneme/chain/New-CRDNN-J-contd/2602-2096units/decode_test_other_4gram_phoneme_rescored_acwt1.0
+fi
