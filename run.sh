@@ -280,3 +280,14 @@ if [ $stage -le 33 ]; then
     --acwt 1.0 --post-decode-acwt 10.0 \
     --decodedir "exp/chain/New-CRDNN-FF-10-fixed-contd/2602-2256units/decode_dev_other_bpe.5000.varikn_acwt1.0"
 fi
+
+if [ $stage -le 34 ]; then
+  local/chain/decode.sh --datadir data/test_clean \
+    --hparams "hyperparams/chain/New-CRDNN-FF-10-contd.yaml" \
+    --acwt 1.0 --post-decode-acwt 10.0 \
+    --decodedir "exp/chain/New-CRDNN-FF-10-fixed-contd/2602-2256units/decode_test_clean_bpe.5000.varikn_acwt1.0"
+  local/chain/decode.sh --datadir data/test_other \
+    --hparams "hyperparams/chain/New-CRDNN-FF-10-contd.yaml" \
+    --acwt 1.0 --post-decode-acwt 10.0 \
+    --decodedir "exp/chain/New-CRDNN-FF-10-fixed-contd/2602-2256units/decode_test_other_bpe.5000.varikn_acwt1.0"
+fi

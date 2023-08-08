@@ -48,8 +48,7 @@ def count_scp_lines(scpfile):
     return lines
 
 def run_test(modules, hparams, device):
-    if getattr(hparams, "subtract_prior", True):
-        prior = torch.load(hparams.prior_file).to(device)
+    prior = torch.load(hparams.prior_file).to(device)
     testdir = pathlib.Path(hparams.testdir)
     if (testdir / "segments").exists():
         num_utts = count_scp_lines(testdir / "segments")
@@ -65,8 +64,7 @@ def run_test(modules, hparams, device):
                 normalized = modules.normalize(feats, lengths=torch.tensor([1.]), epoch=1000)
                 encoded = modules.encoder(normalized)
                 xent_out = modules.xent_lin_out(encoded)
-                if getattr(hparams, "subtract_prior", True):
-                    xent_preds = hparams.log_softmax(xent_out) - prior
+                xent_preds = hparams.log_softmax(xent_out) - prior
                 out = xent_preds
                 kaldi_io.write_mat(fo, out.squeeze(0).cpu().numpy(), key=uttid)
     

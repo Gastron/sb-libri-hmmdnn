@@ -14,13 +14,14 @@ py_script="local/chain/sb-test-mtl-avg.py"
 posteriors_from=
 
 # Decoding params:
-acwt=1.3
-post_decode_acwt=13.0
+acwt=1.0
+post_decode_acwt=10.0
 beam=15
 lattice_beam=8
 
 # Script stage
 stage=0
+skip_scoring="false"
 
 . path.sh
 . parse_options.sh
@@ -59,7 +60,7 @@ if [ $stage -le 2 ]; then
   echo "$nj" > "$decodedir"/num_jobs
 fi
 
-if [ $stage -le 3 ]; then
+if [[ $stage -le 3 && $skip_scoring == "true" ]]; then
   #HACK THIS:
   if [[ "$graphdir" == *"varikn"* ]]; then
     local/score.sh \

@@ -53,12 +53,17 @@ if [ $stage -le 8 ]; then
 fi
 
 if [ $stage -le 9 ]; then
+  # Note temporare stage 2
   local/chain/decode.sh \
+    --stage 2 \
+    --skip_scoring true \
     --hparams "hyperparams/chain/New-CRDNN-J-phoneme.yaml --expname libriphoneme" \
     --tree exp/phoneme/chain/tree/ \
     --graphdir "exp/phoneme/chain/graph/graph_phoneme_test_tgmed" \
     --decodedir "exp/phoneme/chain/New-CRDNN-J/2602-2256units/decode_dev_clean_phoneme_test_tgmed_acwt1.0" 
   local/chain/decode.sh \
+    --stage 2 \
+    --skip_scoring true \
     --hparams "hyperparams/chain/New-CRDNN-J-phoneme.yaml --expname libriphoneme" \
     --tree exp/phoneme/chain/tree/ \
     --graphdir "exp/phoneme/chain/graph/graph_phoneme_test_tgmed" \
@@ -78,12 +83,17 @@ if [ $stage -le 10 ]; then
 fi
 
 if [ $stage -le 11 ]; then
+  # Note temporare stage 2
   local/chain/decode.sh \
+    --stage 2 \
+    --skip_scoring true \
     --hparams "hyperparams/chain/New-CRDNN-J-phoneme-contd.yaml --expname libriphoneme" \
     --tree exp/phoneme/chain/tree/ \
     --graphdir "exp/phoneme/chain/graph/graph_phoneme_test_tgmed" \
     --decodedir "exp/phoneme/chain/New-CRDNN-J-contd/2602-2096units/decode_dev_clean_phoneme_test_tgmed_acwt1.0" 
   local/chain/decode.sh \
+    --stage 2 \
+    --skip_scoring true \
     --hparams "hyperparams/chain/New-CRDNN-J-phoneme-contd.yaml --expname libriphoneme" \
     --tree exp/phoneme/chain/tree/ \
     --graphdir "exp/phoneme/chain/graph/graph_phoneme_test_tgmed" \
@@ -103,13 +113,18 @@ if [ $stage -le 12 ]; then
 fi
 
 if [ $stage -le 13 ]; then
+  # Note temporare stage 2
   local/chain/decode.sh \
+    --stage 2 \
+    --skip_scoring true \
     --hparams "hyperparams/chain/New-CRDNN-J-phoneme-contd.yaml --expname libriphoneme" \
     --tree exp/phoneme/chain/tree/ \
     --datadir "data/test_clean" \
     --graphdir "exp/phoneme/chain/graph/graph_phoneme_test_tgmed" \
     --decodedir "exp/phoneme/chain/New-CRDNN-J-contd/2602-2096units/decode_test_clean_phoneme_test_tgmed_acwt1.0" 
   local/chain/decode.sh \
+    --stage 2 \
+    --skip_scoring true \
     --hparams "hyperparams/chain/New-CRDNN-J-phoneme-contd.yaml --expname libriphoneme" \
     --tree exp/phoneme/chain/tree/ \
     --graphdir "exp/phoneme/chain/graph/graph_phoneme_test_tgmed" \

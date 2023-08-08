@@ -94,7 +94,7 @@ using_max_attn_shift: False
 max_attn_shift: 240
 ctc_weight_decode: 0.5
 coverage_penalty: 3.0 
-temperature: 1.5
+temperature: 1.0
 wer_file: !ref <output_folder>/wer_<test_data_id>_beam<test_beam_size>_cov<coverage_penalty>_eos<eos_threshold>_temp<temperature>_noattnshift.txt
 decode_text_file: !ref <output_folder>/text_<test_data_id>_beam<test_beam_size>_cov<coverage_penalty>_eos<eos_threshold>_temp<temperature>_noattnshift.txt
 
