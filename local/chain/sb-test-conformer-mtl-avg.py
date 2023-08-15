@@ -73,7 +73,7 @@ def run_test(modules, hparams, device):
         with torch.no_grad():
             for uttid, data in tqdm.tqdm(data_iter, total=num_utts):
                 audio = data["audio.pth"].to(device).unsqueeze(0)
-                lengths=torch.tensor([1.])
+                lengths=torch.tensor([1.]).to(device)
                 feats = hparams.compute_features(audio)
                 normalized = modules.normalize(feats, lengths, epoch=1000)
                 # forward modules

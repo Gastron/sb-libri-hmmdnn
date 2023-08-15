@@ -45,7 +45,7 @@ lin_out_name: "lfmmi_lin_out"
 outnorm_scale: 0.0005
 
 # Test files:
-prior_file: !ref <output_folder>/prior.pth
+prior_file: !ref <output_folder>/prior_<average_n_ckpts>.pth
 #test_max_key: "unixtime"
 test_min_key: "loss"
 testdir: data/test_clean
@@ -132,7 +132,7 @@ bos_index: 1
 eos_index: 2
 
 # Decoding parameters
-average_n_ckpts: 10
+average_n_ckpts: 1
 test_data_dir: "valid"
 test_data_id: "valid"
 min_decode_ratio: 0.0

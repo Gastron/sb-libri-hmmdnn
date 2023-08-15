@@ -45,7 +45,7 @@ lin_out_name: "lfmmi_lin_out"
 outnorm_scale: 0.0005
 
 # Test files:
-prior_file: !ref <output_folder>/prior.pth
+prior_file: !ref <output_folder>/prior_<average_n_ckpts>.pth
 #test_max_key: "unixtime"
 test_min_key: "loss"
 testdir: data/test_clean

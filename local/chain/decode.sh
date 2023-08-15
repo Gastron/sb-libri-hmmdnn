@@ -2,7 +2,7 @@
 # Script to test 
 
 am_cmd="srun --gres=gpu:1 --constraint=volta --time 4:0:0 --mem 32G -p dgx-common,dgx-spa,gpu,gpushort"
-decode_cmd="slurm.pl --mem 12G --time 4:0:0"
+decode_cmd="slurm.pl --mem 12G --time 1-12:0:0"
 score_cmd="slurm.pl --mem 2G --time 0:30:0"
 nj=8
 hparams="hyperparams/chain/New-CRDNN-J.yaml"
@@ -12,6 +12,7 @@ tree="exp/chain/tree/"
 graphdir="exp/chain/graph/graph_bpe.5000.varikn"
 py_script="local/chain/sb-test-mtl-avg.py"
 posteriors_from=
+num_units="use_tree_info"
 
 # Decoding params:
 acwt=1.0
@@ -26,13 +27,16 @@ skip_scoring="false"
 . path.sh
 . parse_options.sh
 
+if [ num_units == "use_tree_info" ]; then
+  num_units=$(tree-info "$tree"/tree | grep "num-pdfs" | cut -d" " -f2)
+fi
+
 set -eu
 
 posteriors_prefix="$decodedir/logprobs"
 mkdir -p $decodedir
 
 if [ $stage -le 1 ]; then
-  num_units=$(tree-info "$tree"/tree | grep "num-pdfs" | cut -d" " -f2)
   test_in="--testdir $datadir"
   $am_cmd python $py_script $hparams --num_units $num_units \
     $test_in \
@@ -60,7 +64,7 @@ if [ $stage -le 2 ]; then
   echo "$nj" > "$decodedir"/num_jobs
 fi
 
-if [[ $stage -le 3 && $skip_scoring == "true" ]]; then
+if [[ $stage -le 3 && $skip_scoring == "false" ]]; then
   #HACK THIS:
   if [[ "$graphdir" == *"varikn"* ]]; then
     local/score.sh \

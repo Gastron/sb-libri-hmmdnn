@@ -146,7 +146,7 @@ class LFMMIAM(sb.Brain):
 
     def on_evaluate_start(self, max_key=None, min_key=None):
         """perform checkpoint averge if needed"""
-        super().on_evaluate_start()
+        super().on_evaluate_start(max_key=max_key, min_key=min_key)
 
         max_num_checkpoints=getattr(self.hparams, "average_n_ckpts", 1)
         if max_num_checkpoints > 1:
