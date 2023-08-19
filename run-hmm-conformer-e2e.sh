@@ -25,22 +25,22 @@ fi
 
 if [ $stage -le 27 ]; then
   # There's a hack for num_units
-  local/chain/decode.sh --datadir data/dev_clean \
-    --acwt 1.0 --post-decode-acwt 10.0 \
-    --hparams "hyperparams/chain/Conformer-I-e2e.yaml" \
-    --num_units 2256 \
-    --tree exp/chain_e2e/tree \
-    --graphdir exp/chain_e2e/graph/graph_bpe.5000.varikn \
-    --py_script "local/chain_e2e/sb-test-lfmmi-e2e-conformer.py" \
-    --decodedir "exp/chain_e2e/Conformer-I/3407-${num_units}units/decode_dev_clean_bpe.5000.varikn_acwt1.0-largebeam"
+  #local/chain/decode.sh --datadir data/dev_clean \
+  #  --acwt 1.0 --post-decode-acwt 10.0 \
+  #  --hparams "hyperparams/chain/Conformer-I-e2e.yaml" \
+  #  --num_units 2256 \
+  #  --tree exp/chain_e2e/tree \
+  #  --graphdir exp/chain_e2e/graph/graph_bpe.5000.varikn \
+  #  --py_script "local/chain_e2e/sb-test-lfmmi-e2e-conformer.py" \
+  #  --decodedir "exp/chain_e2e/Conformer-I/3407-${num_units}units/decode_dev_clean_bpe.5000.varikn_acwt1.0"
   local/chain/decode.sh --datadir data/dev_other/ \
     --acwt 1.0 --post-decode-acwt 10.0 \
     --hparams "hyperparams/chain/Conformer-I-e2e.yaml" \
     --num_units 2256 \
     --tree exp/chain_e2e/tree \
     --graphdir exp/chain_e2e/graph/graph_bpe.5000.varikn \
-    --py_script "local/chain_e2e/sb-test-conformer-mtl-avg.py" \
-    --decodedir "exp/chain/Conformer-I/3407-${num_units}units/decode_dev_other_bpe.5000.varikn_acwt1.0-largebeam"
+    --py_script "local/chain_e2e/sb-test-lfmmi-e2e-conformer.py" \
+    --decodedir "exp/chain_e2e/Conformer-I/3407-${num_units}units/decode_dev_other_bpe.5000.varikn_acwt1.0"
 fi
 
 if [ $stage -le 28 ]; then
@@ -50,17 +50,67 @@ if [ $stage -le 28 ]; then
     --num_units 2256 \
     --tree exp/chain_e2e/tree \
     --graphdir exp/chain_e2e/graph/graph_bpe.5000.varikn \
-    --py_script "local/chain_e2e/sb-test-conformer-mtl-avg.py" \
-    --decodedir "exp/chain/Conformer-I/3407-${num_units}units/decode_test_clean_bpe.5000.varikn_acwt1.0-largebeam"
+    --py_script "local/chain_e2e/sb-test-lfmmi-e2e-conformer.py" \
+    --decodedir "exp/chain_e2e/Conformer-I/3407-${num_units}units/decode_test_clean_bpe.5000.varikn_acwt1.0"
   local/chain/decode.sh --datadir data/test_other/ \
     --acwt 1.0 --post-decode-acwt 10.0 \
     --hparams "hyperparams/chain/Conformer-I-e2e.yaml" \
     --num_units 2256 \
     --tree exp/chain_e2e/tree \
     --graphdir exp/chain_e2e/graph/graph_bpe.5000.varikn \
-    --py_script "local/chain_e2e/sb-test-conformer-mtl-avg.py" \
-    --decodedir "exp/chain/Conformer-I/3407-${num_units}units/decode_test_other_bpe.5000.varikn_acwt1.0-largebeam"
+    --py_script "local/chain_e2e/sb-test-lfmmi-e2e-conformer.py" \
+    --decodedir "exp/chain_e2e/Conformer-I/3407-${num_units}units/decode_test_other_bpe.5000.varikn_acwt1.0"
 fi
+
+if [ $stage -le 29 ]; then
+  ## sbatch won't wait, just exit after sbatching 
+  ## and then come back like every three days till its done.
+  sbatch local/chain/run_training_parallel_2gpu.sh \
+    --py_script "local/chain_e2e/sb-train-lfmmi-e2e-conformer-finetune.py" \
+    --hparams "hyperparams/chain/Conformer-I-finetune-e2e.yaml"
+  exit
+fi
+
+
+if [ $stage -le 30 ]; then
+  # There's a hack for num_units
+  local/chain/decode.sh --datadir data/dev_clean \
+    --acwt 1.0 --post-decode-acwt 10.0 \
+    --hparams "hyperparams/chain/Conformer-I-finetune-e2e.yaml" \
+    --num_units 2256 \
+    --tree exp/chain_e2e/tree \
+    --graphdir exp/chain_e2e/graph/graph_bpe.5000.varikn \
+    --py_script "local/chain_e2e/sb-test-lfmmi-e2e-conformer.py" \
+    --decodedir "exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_dev_clean_bpe.5000.varikn_acwt1.0"
+  local/chain/decode.sh --datadir data/dev_other/ \
+    --acwt 1.0 --post-decode-acwt 10.0 \
+    --hparams "hyperparams/chain/Conformer-I-finetune-e2e.yaml" \
+    --num_units 2256 \
+    --tree exp/chain_e2e/tree \
+    --graphdir exp/chain_e2e/graph/graph_bpe.5000.varikn \
+    --py_script "local/chain_e2e/sb-test-lfmmi-e2e-conformer.py" \
+    --decodedir "exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_dev_other_bpe.5000.varikn_acwt1.0"
+fi
+
+if [ $stage -le 31 ]; then
+  local/chain/decode.sh --datadir data/test_clean \
+    --acwt 1.0 --post-decode-acwt 10.0 \
+    --hparams "hyperparams/chain/Conformer-I-finetune-e2e.yaml" \
+    --num_units 2256 \
+    --tree exp/chain_e2e/tree \
+    --graphdir exp/chain_e2e/graph/graph_bpe.5000.varikn \
+    --py_script "local/chain_e2e/sb-test-lfmmi-e2e-conformer.py" \
+    --decodedir "exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_test_clean_bpe.5000.varikn_acwt1.0"
+  local/chain/decode.sh --datadir data/test_other/ \
+    --acwt 1.0 --post-decode-acwt 10.0 \
+    --hparams "hyperparams/chain/Conformer-I-finetune-e2e.yaml" \
+    --num_units 2256 \
+    --tree exp/chain_e2e/tree \
+    --graphdir exp/chain_e2e/graph/graph_bpe.5000.varikn \
+    --py_script "local/chain_e2e/sb-test-lfmmi-e2e-conformer.py" \
+    --decodedir "exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_test_other_bpe.5000.varikn_acwt1.0"
+fi
+
 
 
 

@@ -132,7 +132,7 @@ bos_index: 1
 eos_index: 2
 
 # Decoding parameters
-average_n_ckpts: 1
+average_n_ckpts: 10
 test_data_dir: "valid"
 test_data_id: "valid"
 min_decode_ratio: 0.0

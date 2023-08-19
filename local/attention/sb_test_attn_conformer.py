@@ -77,6 +77,6 @@ if __name__ == "__main__":
 
     test_stats = asr_brain.evaluate(
         test_set=test_data,
-        max_key="ACC",
+        min_key="WER",
         test_loader_kwargs = test_loader_kwargs
     )

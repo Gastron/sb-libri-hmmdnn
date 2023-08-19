@@ -8,6 +8,7 @@ import statistics
 import bisect
 import scipy.stats
 import operator
+from collections import Counter
 
 def load_text(path):
     texts = {}
@@ -73,7 +74,7 @@ def load_utt2spk(utt2spkpath):
     return utt2spk
 
 
-def run_analysis(refpath, leftpath, rightpath, utt2spkpath):
+def run_analysis(refpath, hyppath, utt2spkpath, trainvocab):
     # params
     top_k_utts = 250
     top_k_spks = 5
@@ -81,73 +82,26 @@ def run_analysis(refpath, leftpath, rightpath, utt2spkpath):
 
 
     ref = load_text(refpath)
-    left = load_text(leftpath)
-    right = load_text(rightpath)
-    utt2spk = load_utt2spk(utt2spkpath)
+    hyp = load_text(hyppath)
+
+    S = 0
+    D = 0
+    NUM = 0
+    for key, text in ref.items():
+        if any(word not in trainvocab for word in text):
+            ops = edit_distance.op_table(text, hyp[key])
+            ali = edit_distance.alignment(ops)
+            for step in ali:
+                refindex = step[1]
+                if refindex is not None and text[refindex] not in trainvocab:
+                    if step[0] == "S":
+                        S += 1
+                    elif step[0] == "D":
+                        D += 1
+                    NUM+=1
+    return S, D, NUM
 
 
-    left_details = edit_distance.wer_details_by_utterance(
-        ref, 
-        left, 
-        compute_alignments=True,
-        scoring_mode="strict"
-    )
-    left_by_spk = edit_distance.wer_details_by_speaker(
-        left_details,
-        utt2spk,
-    )
-    left_summary = edit_distance.wer_summary(left_details)
-    left_top_wer, left_top_empty = edit_distance.top_wer_utts(left_details,top_k=top_k_utts)
-    left_top_wer_spk = edit_distance.top_wer_spks(left_by_spk, top_k=top_k_spks)
-
-    right_details = edit_distance.wer_details_by_utterance(
-        ref, 
-        right, 
-        compute_alignments=True,
-        scoring_mode="strict"
-    )
-    right_by_spk = edit_distance.wer_details_by_speaker(
-        right_details,
-        utt2spk,
-    )
-    right_summary = edit_distance.wer_summary(right_details)
-    right_top_wer, right_top_empty  = edit_distance.top_wer_utts(right_details,top_k=top_k_utts)
-    right_top_wer_spk = edit_distance.top_wer_spks(right_by_spk, top_k=top_k_spks)
-
-    ref_quantiles, cutoffs = split_to_quantiles(ref, n=n_quantiles)
-    left_quantile_summaries = wer_by_quantiles(ref_quantiles, cutoffs, left)
-    right_quantile_summaries = wer_by_quantiles(ref_quantiles, cutoffs, right)
-    print("Left quantile WERs relative to overall left WER:")
-    print([f"{name}: {s['WER']/left_summary['WER']*100.0}" for name, s in left_quantile_summaries.items()])
-    print("Right quantile WERs, again relative:")
-    print([f"{name}: {s['WER']/right_summary['WER']*100.0}" for name, s in right_quantile_summaries.items()])
-
-    diff = right_summary['WER']-left_summary['WER']
-    rel_diff = (diff) *100 / right_summary['WER']
-
-    ## START THE LINE:
-    line = f"& {format_number(diff)} & {format_relative(rel_diff)}    "
-    credibility = format_credib(get_bootci(refpath, leftpath, rightpath))
-    print(credibility)
-    if len(credibility) == 4:
-        line += f"& {credibility}          "
-    elif len(credibility) == 5:
-        line += f"& {credibility}         "
-
-    cross_details = edit_distance.wer_details_by_utterance( 
-    left,
-    right,
-    compute_alignments=True,
-    scoring_mode="strict"
-    ) 
-    cross_summary = edit_distance.wer_summary(cross_details)
-    line += f"& {cross_summary['SER']:.2f}   "
-    wergetter = operator.itemgetter("WER")
-    kt_utt = scipy.stats.kendalltau(list(map(wergetter, left_details)), list(map(wergetter, right_details)))
-    wergetter = operator.itemgetter("WER")
-    kt_spk = scipy.stats.kendalltau(list(map(wergetter, left_by_spk)), list(map(wergetter, right_by_spk)))
-    line+= f"& {kt_utt[0]:.2f}  & {kt_spk[0]:.2f} \\\\"
-    return line
 
 
 def deal_with_hmm(path):
@@ -171,28 +125,36 @@ def deal_with_hmm(path):
 
 def find_refs(path):
     if "test_clean" in path:
-        return "data/test_clean/text", "data/test_clean/utt2spk"
+        return "data/test_clean/text", "data/test_clean/utt2spk", "data/train_960/text"
     if "test_other" in path:
-        return "data/test_other/text", "data/test_other/utt2spk"
+        return "data/test_other/text", "data/test_other/utt2spk", "data/train_960/text"
     if "dev_clean" in path:
-        return "data/dev_clean/text", "data/dev_clean/utt2spk"
+        return "data/dev_clean/text", "data/dev_clean/utt2spk", "data/train_960/text"
     if "dev_other" in path:
-        return "data/dev_other/text", "data/dev_other/utt2spk"
+        return "data/dev_other/text", "data/dev_other/utt2spk", "data/train_960/text"
     if "test-all" in path:
-        return "fin-train20/speechbrain_2015-2020-kevat/data/parl-test-all/text", "fin-train20/speechbrain_2015-2020-kevat/data/parl-test-all/utt2spk"
+        return "fin-train20/speechbrain_2015-2020-kevat/data/parl-test-all/text", "fin-train20/speechbrain_2015-2020-kevat/data/parl-test-all/utt2spk", "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2015-2020-train_cleaned/text"
     if "test2020" in path:
-        return "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2020-test/text", "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2020-test/utt2spk"
+        return "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2020-test/text", "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2020-test/utt2spk", "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2015-2020-train_cleaned/text"
+    if "test2021" in path:
+        return "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2020-test/text", "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2020-test/utt2spk", "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2015-2020-train_cleaned/text"
+
+def get_vocab(path):
+    vocab = Counter()
+    with open(path) as fin:
+        for line in fin:
+            vocab.update(line.strip().split())
+    return vocab
 
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("leftpath")
-    parser.add_argument("rightpath")
+    parser.add_argument("path")
     args = parser.parse_args()
-    leftpath = deal_with_hmm(args.leftpath)
-    rightpath = deal_with_hmm(args.rightpath)
-    refpath, utt2spkpath = find_refs(args.leftpath)
-    line = run_analysis(refpath, leftpath, rightpath, utt2spkpath)
-    print(line)
+    path = deal_with_hmm(args.path)
+    refpath, utt2spkpath, trainpath = find_refs(args.path)
+    trainvocab = get_vocab(trainpath)
+    S, D, NUM = run_analysis(refpath, path, utt2spkpath, trainvocab)
+    print(f"{S}, {D}, {NUM}, {(S+D)/NUM*100.}")
 

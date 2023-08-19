@@ -13,7 +13,7 @@ seed: 3407
 __set_seed: !apply:torch.manual_seed [!ref <seed>]
 
 num_units: 5000
-output_folder: !ref exp/attention/MWER/Conformer-I/<seed>-<num_units>units
+output_folder: !ref exp/attention/MWER/Conformer-I-small/<seed>-<num_units>units
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
 tokenizer_path: !ref exp/lm/train_varikn.bpe<num_units>.d0.0001/bpe.<num_units>.model
@@ -21,7 +21,7 @@ tokenizer_path: !ref exp/lm/train_varikn.bpe<num_units>.d0.0001/bpe.<num_units>.
 tokenizer: !new:sentencepiece.SentencePieceProcessor
     model_file: !ref <tokenizer_path>
 
-pretraining_from: !ref exp/attention/Conformer-I/<seed>-<num_units>units/save
+pretraining_from: !ref exp/attention/Conformer-I-small/<seed>-<num_units>units/save
 
 # Data files
 trainshards: !apply:glob.glob ["./shards/train_960/shard-000*.tar"]
@@ -59,7 +59,7 @@ win_length: 32
 # The global batch size is computed as batch_size * n_gpus * gradient_accumulation.
 # For this recipe, total batchsize should be above 2000s
 # I am accumulating 48 X this batch size (e.g. grad_accumulation_factor 16, 3 procs)
-max_batch_len: 55
+max_batch_len: 55 
 extra_length_tolerance: 30
 max_batch_len_val: 40 # we reduce it as the beam is much wider (VRAM)
 ckpt_interval_minutes: 5
@@ -91,11 +91,11 @@ valid_dataloader_opts:
 
 ####################### Model parameters ###########################
 # Transformer
-d_model: 512
-nhead: 8
+d_model: 144
+nhead: 4
 num_encoder_layers: 12
-num_decoder_layers: 6
-d_ffn: 2048
+num_decoder_layers: 4
+d_ffn: 1024 
 transformer_dropout: 0.1
 activation: !name:torch.nn.GELU
 output_neurons: 5000

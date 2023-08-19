@@ -13,7 +13,7 @@ seed: 3407
 __set_seed: !apply:torch.manual_seed [!ref <seed>]
 
 num_units: 5000
-output_folder: !ref exp/attention/MWER/Conformer-I/<seed>-<num_units>units
+output_folder: !ref exp/attention/Conformer-I-small-finetune/<seed>-<num_units>units
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
 tokenizer_path: !ref exp/lm/train_varikn.bpe<num_units>.d0.0001/bpe.<num_units>.model
@@ -21,7 +21,7 @@ tokenizer_path: !ref exp/lm/train_varikn.bpe<num_units>.d0.0001/bpe.<num_units>.
 tokenizer: !new:sentencepiece.SentencePieceProcessor
     model_file: !ref <tokenizer_path>
 
-pretraining_from: !ref exp/attention/Conformer-I/<seed>-<num_units>units/save
+pretraining_from: !ref exp/attention/Conformer-I-small/<seed>-<num_units>units/save
 
 # Data files
 trainshards: !apply:glob.glob ["./shards/train_960/shard-000*.tar"]
@@ -32,19 +32,11 @@ validshards: !apply:glob.glob ["./shards/dev_all/shard-000*.tar"]
 # Please, set your parameters accordingly.
 number_of_epochs: 20
 ctc_weight: 0.3
-grad_accumulation_factor: 16
+grad_accumulation_factor: 4
 max_grad_norm: 5.0
 loss_reduction: 'batchmean'
 sorting: random
 num_workers: 4
-
-# MWER params:
-nll_weight: 0.01
-topk: 4
-sampler_beam_size: 4
-subtract_avg: True
-mwer_pad_index: 0
-minwertype: TrueWER
 
 # stages related parameters
 lr_adam: 0.000008
@@ -58,8 +50,8 @@ win_length: 32
 # To make Transformers converge, the global bath size should be large enough.
 # The global batch size is computed as batch_size * n_gpus * gradient_accumulation.
 # For this recipe, total batchsize should be above 2000s
-# I am accumulating 48 X this batch size (e.g. grad_accumulation_factor 16, 3 procs)
-max_batch_len: 55
+# I am accumulating 12 X this batch size (e.g. grad_accumulation_factor 4, 3 procs)
+max_batch_len: 220
 extra_length_tolerance: 30
 max_batch_len_val: 40 # we reduce it as the beam is much wider (VRAM)
 ckpt_interval_minutes: 5
@@ -91,11 +83,11 @@ valid_dataloader_opts:
 
 ####################### Model parameters ###########################
 # Transformer
-d_model: 512
-nhead: 8
+d_model: 144
+nhead: 4
 num_encoder_layers: 12
-num_decoder_layers: 6
-d_ffn: 2048
+num_decoder_layers: 4
+d_ffn: 1024 
 transformer_dropout: 0.1
 activation: !name:torch.nn.GELU
 output_neurons: 5000
@@ -115,7 +107,7 @@ test_data_dir: "valid"
 test_data_id: "valid"
 min_decode_ratio: 0.0
 max_decode_ratio: 1.0
-valid_search_interval: 20
+valid_search_interval: 1
 valid_beam_size: 4
 test_beam_size: 66
 #lm_weight: 0.60
@@ -208,22 +200,6 @@ test_search: !new:speechbrain.decoders.S2STransformerBeamSearch
     length_normalization: True
       
 
-sampler: !new:local_decoders.S2STransformerBeamSearch
-    modules: [!ref <Transformer>, !ref <seq_lin>, !ref <ctc_lin>]
-    bos_index: !ref <bos_index>
-    eos_index: !ref <eos_index>
-    blank_index: !ref <blank_index>
-    min_decode_ratio: !ref <min_decode_ratio>
-    max_decode_ratio: !ref <max_decode_ratio>
-    beam_size: !ref <test_beam_size>
-    ctc_weight: 0.0
-    topk: !ref <topk>
-    #lm_weight: !ref <lm_weight>
-    #lm_modules: !ref <lm_model>
-    temperature: !ref <temperature>
-    #temperature_lm: 1.15
-    using_eos_threshold: False
-    length_normalization: True
 
 log_softmax: !new:torch.nn.LogSoftmax
     dim: -1

@@ -20,9 +20,6 @@ import io
 import torchaudio
 sys.path.append("local/")
 import pathlib
-from minwer_simple import minWER_loss_given
-from speechbrain.utils.edit_distance import op_table, count_ops
-import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -58,56 +55,35 @@ class ASR(sb.core.Brain):
         enc_out, pred = self.modules.Transformer(
             src, tokens_bos, wav_lens, pad_idx=self.hparams.pad_index,
         )
+
+        # output layer for ctc log-probabilities
+        logits = self.modules.ctc_lin(enc_out)
+        p_ctc = self.hparams.log_softmax(logits)
+
         # output layer for seq2seq log-probabilities
         pred = self.modules.seq_lin(pred)
         p_seq = self.hparams.log_softmax(pred)
-        predictions = {"seq_logprobs":p_seq}
 
         # Compute outputs
         hyps = None
         if stage == sb.Stage.TRAIN:
             hyps = None
-            # MWER N-best
-            # set max decoding step to the label length
-            self.hparams.sampler.max_decode_ratio = (
-                batch.tokens.data.size(1) / enc_out.size(1) * 1.5
-            )
-            (
-                predicted_tokens,
-                topk_scores,
-                topk_hyps,
-                topk_lens,
-            ) = self.hparams.sampler(enc_out.detach(), wav_lens)
-            predictions["p_tokens"] = predicted_tokens
-            predictions["topk_scores"] = topk_scores
-            predictions["topk_hyps"] = topk_hyps
-            predictions["topk_lens"] = topk_lens
-            #return p_seq, wav_lens, topk_hyps, topk_scores, topk_len
-
         elif stage == sb.Stage.VALID:
-            hyps, _ = self.hparams.valid_search(enc_out.detach(), wav_lens)
+            hyps = None
+            current_epoch = self.hparams.epoch_counter.current
+            if current_epoch % self.hparams.valid_search_interval == 0:
+                # for the sake of efficiency, we only perform beamsearch with limited capacity
+                # and no LM to give user some idea of how the AM is doing
+                hyps, _ = self.hparams.valid_search(enc_out.detach(), wav_lens)
         elif stage == sb.Stage.TEST:
             hyps, _ = self.hparams.test_search(enc_out.detach(), wav_lens)
-        predictions["tokens"] = hyps
 
-        return predictions
-
-    def init_optimizers(self):
-        #for modulename in getattr(self.hparams, "frozen_modules", []):
-        #    getattr(self.modules, modulename).requires_grad_(False)
-        #if self.distributed_launch:
-        #    self.modules.CNN.module.requires_grad_(False)
-        #    self.modules.Transformer.module.encoder.requires_grad_(False)
-        #else:
-        #    self.modules.CNN.requires_grad_(False)
-        #    self.modules.Transformer.encoder.requires_grad_(False)
-        super().init_optimizers()
+        return p_ctc, p_seq, wav_lens, hyps
 
     def compute_objectives(self, predictions, batch, stage):
         """Computes the loss (CTC+NLL) given predictions and targets."""
 
-        p_seq = predictions["seq_logprobs"]
-        hyps = predictions["tokens"] 
+        (p_ctc, p_seq, wav_lens, hyps,) = predictions
 
         ids = batch.__key__
         tokens_eos, tokens_eos_lens = batch.tokens_eos
@@ -121,50 +97,37 @@ class ASR(sb.core.Brain):
             tokens = torch.cat([tokens, tokens], dim=0)
             tokens_lens = torch.cat([tokens_lens, tokens_lens], dim=0)
 
+        loss_seq = self.hparams.seq_cost(
+            p_seq, tokens_eos, length=tokens_eos_lens
+        ).sum()
 
-        if stage == sb.Stage.TRAIN:
-            loss_seq = self.hparams.seq_cost(
-                p_seq, tokens_eos, length=tokens_eos_lens
-            ).sum()
-            if getattr(self.hparams, "minwertype", "SubWER") == "SubWER":
-                raise ValueError("Not supporting subword error rate any more")
-            elif getattr(self.hparams, "minwertype", "SubWER") == "TrueWER":
-                specials = [self.hparams.bos_index, self.hparams.eos_index, self.hparams.unk_index]
-                batchsize = len(batch)
-                wers = torch.zeros((batchsize,self.hparams.topk), dtype=torch.float32)
-                for i, target in enumerate(batch.trn):
-                    # Ad hoc filter here:
-                    #target_words = [t in target.split() if t not in ["<UNK>"]]
-                    target_words = [t for t in target.split() if t not in ["<UNK>"]]
-                    for j, hyp in enumerate(predictions["topk_hyps"][i]):
-                        hyp = hyp.cpu().tolist()
-                        hyp = [token for token in hyp if token not in specials]
-                        hyp = self.hparams.tokenizer.decode_ids(hyp).split(" ")
-                        ops = op_table(target_words, hyp)
-                        errors = sum(count_ops(ops).values())
-                        wers[i,j] = errors
-                minwerloss = minWER_loss_given(
-                        wers = wers,
-                        hypotheses_scores = predictions["topk_scores"],
-                        subtract_avg = self.hparams.subtract_avg
-                )
-            loss = loss_seq * self.hparams.nll_weight + minwerloss
-        else:
-            loss = torch.tensor([0.])
+        loss_ctc = self.hparams.ctc_cost(
+            p_ctc, tokens, wav_lens, tokens_lens
+        ).sum()
+
+        loss = (
+            self.hparams.ctc_weight * loss_ctc
+            + (1 - self.hparams.ctc_weight) * loss_seq
+        )
 
         if stage != sb.Stage.TRAIN:
-            # Converted predicted tokens from indexes to words
-            specials = [self.hparams.bos_index, self.hparams.eos_index, self.hparams.unk_index]
-            hyps = [
-                    [token for token in pred if token not in specials]
-                    for pred in hyps
-            ]
-            predicted_words = [
-                self.hparams.tokenizer.decode_ids(prediction).split(" ")
-                for prediction in hyps
-            ]
-            target_words = [trn.split(" ") for trn in batch.trn]
-            self.wer_metric.append(ids, predicted_words, target_words)
+            current_epoch = self.hparams.epoch_counter.current
+            valid_search_interval = self.hparams.valid_search_interval
+            if current_epoch % valid_search_interval == 0 or (
+                stage == sb.Stage.TEST
+            ):
+                # Converted predicted tokens from indexes to words
+                specials = [self.hparams.bos_index, self.hparams.eos_index, self.hparams.unk_index]
+                hyps = [
+                        [token for token in pred if token not in specials]
+                        for pred in hyps
+                ]
+                predicted_words = [
+                    self.hparams.tokenizer.decode_ids(prediction).split(" ")
+                    for prediction in hyps
+                ]
+                target_words = [trn.split(" ") for trn in batch.trn]
+                self.wer_metric.append(ids, predicted_words, target_words)
 
             # compute the accuracy of the one-step-forward prediction
             self.acc_metric.append(p_seq, tokens_eos, tokens_eos_lens)
@@ -213,7 +176,12 @@ class ASR(sb.core.Brain):
         else:
             stage_stats["ACC"] = self.acc_metric.summarize()
             current_epoch = self.hparams.epoch_counter.current
-            stage_stats["WER"] = self.wer_metric.summarize("error_rate")
+            valid_search_interval = self.hparams.valid_search_interval
+            if (
+                current_epoch % valid_search_interval == 0
+                or stage == sb.Stage.TEST
+            ):
+                stage_stats["WER"] = self.wer_metric.summarize("error_rate")
             
 
         # log stats and save checkpoint at end-of-epoch
@@ -237,7 +205,7 @@ class ASR(sb.core.Brain):
             self.checkpointer.save_and_keep_only(
                 meta={"ACC": stage_stats["ACC"], "epoch": epoch},
                 max_keys=["ACC"],
-                num_to_keep=20,
+                num_to_keep=10,
             )
 
         elif stage == sb.Stage.TEST:
@@ -375,7 +343,7 @@ class ASR(sb.core.Brain):
                 self.scaler.update()
                 self.zero_grad()
                 self.optimizer_step += 1
-                #self.hparams.noam_annealing(self.optimizer)
+                self.hparams.noam_annealing(self.optimizer)
         else:
             if self.bfloat16_mix_prec:
                 with torch.autocast(
@@ -396,7 +364,7 @@ class ASR(sb.core.Brain):
                     self.optimizer.step()
                 self.zero_grad()
                 self.optimizer_step += 1
-                #self.hparams.noam_annealing(self.optimizer)
+                self.hparams.noam_annealing(self.optimizer)
 
         self.on_fit_batch_end(batch, outputs, loss, should_step)
         return loss.detach().cpu()
@@ -535,7 +503,7 @@ if __name__ == "__main__":
         print(f"Loaded the average of {len(ckpts)} best checkpoints")
     hparams["modules"]["CNN"].requires_grad_(False)
     hparams["modules"]["Transformer"].encoder.requires_grad_(False)
-    
+
     # Trainer initialization
     asr_brain = ASR(
         modules=hparams["modules"],

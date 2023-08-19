@@ -27,7 +27,7 @@ skip_scoring="false"
 . path.sh
 . parse_options.sh
 
-if [ num_units == "use_tree_info" ]; then
+if [ "$num_units" = "use_tree_info" ]; then
   num_units=$(tree-info "$tree"/tree | grep "num-pdfs" | cut -d" " -f2)
 fi
 
