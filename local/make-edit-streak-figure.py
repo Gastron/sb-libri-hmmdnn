@@ -40,10 +40,16 @@ def load_text(path):
 def deal_with_hmm(path):
     if path.endswith(".txt"):
         return path
-    elif not "chain" in path:
-        raise ValueError("Don't know how to deal with" + path)
     if "dev" in path:
         hp_path = path
+    elif "test-all" in path:
+        hp_path = path.replace("test-all", "dev-all-fixed")
+    elif "test2020" in path:
+        hp_path = path.replace("test-all", "dev-all-fixed")
+    elif "test-2020" in path:
+        hp_path = path.replace("test-2020", "dev-all-fixed")
+    elif "yle" in path:
+        hp_path = path.replace("yle-test-new", "parl-dev-all-fixed")
     else:
         hp_path = path.replace("test", "dev")
     wipf = hp_path +"/scoring_kaldi/wer_details/wip" 
@@ -98,9 +104,9 @@ ratios_conformer_s_trans = {streak_len: [] for streak_len in range(1,max_streak+
 ratios_conformer_l_trans = {streak_len: [] for streak_len in range(1,max_streak+1)}
 
 # 1. Libri Test Clean:
-test_ref_path = "librispeech/exp/chain/New-CRDNN-FF-10-fixed-contd/2602-2256units/decode_test_clean_bpe.5000.varikn_acwt1.0/scoring_kaldi/test_filt.txt"
+test_ref_path = "librispeech/exp/chain/FIX-New-CRDNN-FF-10-fixed-contd/2602-2256units/decode_test_clean_bpe.5000.varikn_acwt1.0/scoring_kaldi/test_filt.txt"
 test_ref = load_text(test_ref_path)
-hmm_crdnn_trans_hyp_path = "librispeech/exp/chain/New-CRDNN-FF-10-fixed-contd/2602-2256units/decode_test_clean_bpe.5000.varikn_acwt1.0/scoring_kaldi/penalty_0.5/10.txt"
+hmm_crdnn_trans_hyp_path = deal_with_hmm("librispeech/exp/chain/FIX-New-CRDNN-FF-10-fixed-contd/2602-2256units/decode_test_clean_bpe.5000.varikn_acwt1.0/")
 aed_crdnn_trans_hyp_path = "librispeech/exp/attention/CRDNN-FF-10-contd/2602-5000units/text_test_clean_beam8_cov3.0_eos1.3_temp1.5_noattnshift.txt"
 hmm_w2v2_trans_hyp_path = "librispeech/exp/chain/New-W2V2-F/2602-2240units/decode_test_clean_bpe.5000.varikn_acwt1.0/scoring_kaldi/penalty_0.5/10.txt"
 aed_w2v2_trans_hyp_path = "librispeech/exp/attention/New-W2V2-F/2602-5000units/text_test_clean_beam12_cov3.0_eos1.3_temp1.0_noattnshift.txt"
@@ -118,6 +124,7 @@ hmm_conformer_l_hyp = load_text(hmm_conformer_l_path)
 aed_conformer_s_hyp = load_text(aed_conformer_s_path)
 aed_conformer_l_hyp = load_text(aed_conformer_l_path)
 
+
 calculate_ratios(ratios_crdnn_trans, test_ref, hmm_crdnn_trans_hyp, aed_crdnn_trans_hyp)
 calculate_ratios(ratios_w2v2_trans, test_ref, hmm_w2v2_trans_hyp, aed_w2v2_trans_hyp)
 calculate_ratios(ratios_conformer_s_trans, test_ref, hmm_conformer_s_hyp, aed_conformer_s_hyp)
@@ -125,9 +132,9 @@ calculate_ratios(ratios_conformer_l_trans, test_ref, hmm_conformer_l_hyp, aed_co
 
 
 # 2. Libri Test Other:
-test_ref_path = "librispeech/exp/chain/New-CRDNN-FF-10-fixed-contd/2602-2256units/decode_test_other_bpe.5000.varikn_acwt1.0/scoring_kaldi/test_filt.txt"
+test_ref_path = "librispeech/exp/chain/FIX-New-CRDNN-FF-10-fixed-contd/2602-2256units/decode_test_other_bpe.5000.varikn_acwt1.0/scoring_kaldi/test_filt.txt"
 test_ref = load_text(test_ref_path)
-hmm_crdnn_trans_hyp_path = "librispeech/exp/chain/New-CRDNN-FF-10-fixed-contd/2602-2256units/decode_test_other_bpe.5000.varikn_acwt1.0/scoring_kaldi/penalty_0.0/13.txt"
+hmm_crdnn_trans_hyp_path = deal_with_hmm("librispeech/exp/chain/FIX-New-CRDNN-FF-10-fixed-contd/2602-2256units/decode_test_other_bpe.5000.varikn_acwt1.0/")
 aed_crdnn_trans_hyp_path = "librispeech/exp/attention/CRDNN-FF-10-contd/2602-5000units/text_test_other_beam24_cov3.0_eos1.3_temp1.5_noattnshift.txt"
 hmm_w2v2_trans_hyp_path = "librispeech/exp/chain/New-W2V2-F/2602-2240units/decode_test_other_bpe.5000.varikn_acwt1.0/scoring_kaldi/penalty_0.5/11.txt"
 aed_w2v2_trans_hyp_path = "librispeech/exp/attention/New-W2V2-F/2602-5000units/text_test_other_beam12_cov3.0_eos1.3_temp1.0_noattnshift.txt"
@@ -150,11 +157,25 @@ calculate_ratios(ratios_w2v2_trans, test_ref, hmm_w2v2_trans_hyp, aed_w2v2_trans
 calculate_ratios(ratios_conformer_s_trans, test_ref, hmm_conformer_s_hyp, aed_conformer_s_hyp)
 calculate_ratios(ratios_conformer_l_trans, test_ref, hmm_conformer_l_hyp, aed_conformer_l_hyp)
 
-# 3. FP 16
+# 3A: Libri Test Clean MWER
+test_ref_path = "librispeech/exp/chain/New-CRDNN-FF-10-fixed-contd/2602-2256units/decode_test_clean_bpe.5000.varikn_acwt1.0/scoring_kaldi/test_filt.txt"
+test_ref = load_text(test_ref_path)
+hmm_conformer_s_ft_path = deal_with_hmm("exp/chain/Conformer-I-small-finetune/3407-2256units/decode_test_clean_bpe.5000.varikn_acwt1.0-avg1/")
+hmm_conformer_s_ft_hyp = load_text(hmm_conformer_s_ft_path)
+hmm_conformer_l_path = deal_with_hmm("exp/chain/Conformer-I/3407-2256units/decode_test_clean_bpe.5000.varikn_acwt1.0/")
+hmm_conformer_l_hyp = load_text(hmm_conformer_l_path)
+aed_conformer_s_mwer_path = "exp/attention/MWER/Conformer-I-small/3407-5000units/text_test_clean_beam66_temp1.15_ctc0.4_ckpts1.txt"
+aed_conformer_s_mwer_hyp = load_text(aed_conformer_s_mwer_path)
+aed_conformer_l_mwer_path = "exp/attention/MWER/Conformer-I/3407-5000units/text_test_clean_beam66_temp1.15_ctc0.4_ckpts1.txt"
+aed_conformer_l_mwer_hyp = load_text(aed_conformer_l_mwer_path)
+calculate_ratios(ratios_conformer_s_trans, test_ref, hmm_conformer_s_ft_hyp, aed_conformer_s_mwer_hyp)
+calculate_ratios(ratios_conformer_l_trans, test_ref, hmm_conformer_l_hyp, aed_conformer_l_mwer_hyp)
+
+# 3B: FP 16
 test_ref_path = "fin-train20/speechbrain_2015-2020-kevat/exp/mtl-am/New-CRDNN-J-contd/2602-2328units/decode_parl-test-all_sb-vocab-train20-varikn.d0.0001-bpe1750/scoring_kaldi/test_filt.txt"
 test_ref = load_text(test_ref_path)
 
-hmm_crdnn_trans_hyp_path = "fin-train20/speechbrain_2015-2020-kevat/exp/mtl-am/New-CRDNN-J-contd/2602-2328units/decode_parl-test-all_sb-vocab-train20-varikn.d0.0001-bpe1750/scoring_kaldi/penalty_0.5/10.txt"
+hmm_crdnn_trans_hyp_path = deal_with_hmm("fin-train20/speechbrain_2015-2020-kevat/exp/mtl-am/FIX-New-CRDNN-J-contd/2602-2328units/decode_parl-test-all_sb-vocab-train20-varikn.d0.0001-bpe1750")
 aed_crdnn_trans_hyp_path = "fin-train20/speechbrain_2015-2020-kevat_e2e/exp/MWER/CRDNN-E-contd/2602-1750units/text_test-all_beam4_cov3.0_eos1.2_temp2.0_noattnshift.txt"
 hmm_w2v2_trans_hyp_path = "fin-train20/speechbrain_2015-2020-kevat/exp/mtl-am/New-W2V2-F/2602-2480units/decode_parl-test-all_sb-vocab-train20-varikn.d0.0001-bpe1750/scoring_kaldi/penalty_0.5/10.txt"
 aed_w2v2_trans_hyp_path = "fin-train20/speechbrain_2015-2020-kevat_e2e/exp/MWER/W2V2-F/2602-1750units/text_test-all_beam4_cov3.0_eos1.3_temp2.0_noattnshift.txt"
@@ -166,11 +187,25 @@ aed_w2v2_trans_hyp = load_text(aed_w2v2_trans_hyp_path)
 calculate_ratios(ratios_crdnn_trans, test_ref, hmm_crdnn_trans_hyp, aed_crdnn_trans_hyp)
 calculate_ratios(ratios_w2v2_trans, test_ref, hmm_w2v2_trans_hyp, aed_w2v2_trans_hyp)
 
-# 4. FP 20
+# 4A: Libri Test Other MWER
+test_ref_path = "librispeech/exp/chain/New-CRDNN-FF-10-fixed-contd/2602-2256units/decode_test_other_bpe.5000.varikn_acwt1.0/scoring_kaldi/test_filt.txt"
+test_ref = load_text(test_ref_path)
+hmm_conformer_s_ft_path = deal_with_hmm("exp/chain/Conformer-I-small-finetune/3407-2256units/decode_test_other_bpe.5000.varikn_acwt1.0-avg1/")
+hmm_conformer_s_ft_hyp = load_text(hmm_conformer_s_ft_path)
+hmm_conformer_l_path = deal_with_hmm("exp/chain/Conformer-I/3407-2256units/decode_test_other_bpe.5000.varikn_acwt1.0/")
+hmm_conformer_l_hyp = load_text(hmm_conformer_l_path)
+aed_conformer_s_mwer_path = "exp/attention/MWER/Conformer-I-small/3407-5000units/text_test_other_beam66_temp1.15_ctc0.4_ckpts1.txt"
+aed_conformer_s_mwer_hyp = load_text(aed_conformer_s_mwer_path)
+aed_conformer_l_mwer_path = "exp/attention/MWER/Conformer-I/3407-5000units/text_test_other_beam66_temp1.15_ctc0.4_ckpts1.txt"
+aed_conformer_l_mwer_hyp = load_text(aed_conformer_l_mwer_path)
+calculate_ratios(ratios_conformer_s_trans, test_ref, hmm_conformer_s_ft_hyp, aed_conformer_s_mwer_hyp)
+calculate_ratios(ratios_conformer_l_trans, test_ref, hmm_conformer_l_hyp, aed_conformer_l_mwer_hyp)
+
+# 4B FP 20
 test_ref_path = "fin-train20/speechbrain_2015-2020-kevat/exp/mtl-am/New-CRDNN-J-contd/2602-2328units/decode_parl-test2020_sb-vocab-train20-varikn.d0.0001-bpe1750/scoring_kaldi/test_filt.txt"
 test_ref = load_text(test_ref_path)
 
-hmm_crdnn_trans_hyp_path = "fin-train20/speechbrain_2015-2020-kevat/exp/mtl-am/New-CRDNN-J-contd/2602-2328units/decode_parl-test2020_sb-vocab-train20-varikn.d0.0001-bpe1750/scoring_kaldi/penalty_0.5/10.txt"
+hmm_crdnn_trans_hyp_path = deal_with_hmm("fin-train20/speechbrain_2015-2020-kevat/exp/mtl-am/FIX-New-CRDNN-J-contd/2602-2328units/decode_parl-test-2020_sb-vocab-train20-varikn.d0.0001-bpe1750/")
 aed_crdnn_trans_hyp_path = "fin-train20/speechbrain_2015-2020-kevat_e2e/exp/MWER/CRDNN-E-contd/2602-1750units/text_test2021_beam4_cov3.0_eos1.3_temp2.0_noattnshift.txt"
 hmm_w2v2_trans_hyp_path = "fin-train20/speechbrain_2015-2020-kevat/exp/mtl-am/New-W2V2-F/2602-2480units/decode_parl-test2020_sb-vocab-train20-varikn.d0.0001-bpe1750/scoring_kaldi/penalty_0.5/10.txt"
 aed_w2v2_trans_hyp_path = "fin-train20/speechbrain_2015-2020-kevat_e2e/exp/MWER/W2V2-F/2602-1750units/text_test2021_beam4_cov3.0_eos1.3_temp2.0_noattnshift.txt"
@@ -189,7 +224,7 @@ ratio_values_w2v2 = list(zip(*list(ratios_w2v2_trans.values())))
 ratio_values_conf_s = list(zip(*list(ratios_conformer_s_trans.values())))
 ratio_values_conf_l = list(zip(*list(ratios_conformer_l_trans.values())))
 datasets = [ "Libri Test Clean", "Libri Test Other","FP Test16", "FP Test20"]
-datasets_conf = ["Libri Test Clean", "Libri Test Other"]
+datasets_conf = ["Libri Test Clean", "Libri Test Other", "Libri Test Clean MWER", "Libri Test Other MWER"]
 
 crdnn_plots = []
 for values in ratio_values_crdnn:

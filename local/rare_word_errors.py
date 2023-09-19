@@ -14,7 +14,12 @@ def load_text(path):
     texts = {}
     with open(path) as fin:
         for line in fin:
-            uttid, *text = line.strip().split()
+            try:
+                uttid, *text = line.strip().split()
+            except ValueError:
+                uttid = line.strip()
+                print(uttid)
+                text = []
             # HACK!
             uttid = uttid.replace("é", "e")
             texts[uttid] = text
@@ -113,6 +118,10 @@ def deal_with_hmm(path):
         hp_path = path.replace("test-all", "dev-all-fixed")
     elif "test2020" in path:
         hp_path = path.replace("test-all", "dev-all-fixed")
+    elif "test-2020" in path:
+        hp_path = path.replace("test-2020", "dev-all-fixed")
+    elif "yle" in path:
+        hp_path = path.replace("yle-test-new", "parl-dev-all-fixed")
     else:
         hp_path = path.replace("test", "dev")
     wipf = hp_path +"/scoring_kaldi/wer_details/wip" 
@@ -136,8 +145,12 @@ def find_refs(path):
         return "fin-train20/speechbrain_2015-2020-kevat/data/parl-test-all/text", "fin-train20/speechbrain_2015-2020-kevat/data/parl-test-all/utt2spk", "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2015-2020-train_cleaned/text"
     if "test2020" in path:
         return "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2020-test/text", "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2020-test/utt2spk", "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2015-2020-train_cleaned/text"
+    if "test-2020" in path:
+        return "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2020-test/text", "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2020-test/utt2spk", "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2015-2020-train_cleaned/text"
     if "test2021" in path:
         return "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2020-test/text", "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2020-test/utt2spk", "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2015-2020-train_cleaned/text"
+    if "yle" in path:
+        return "fin-train20/kaldi_2015-2020-kevat/s5/data/yle-test-new/text", "fin-train20/kaldi_2015-2020-kevat/s5/data/yle-test-new/utt2spk", "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2015-2020-train_cleaned/text"
 
 def get_vocab(path):
     vocab = Counter()
@@ -156,5 +169,5 @@ if __name__ == "__main__":
     refpath, utt2spkpath, trainpath = find_refs(args.path)
     trainvocab = get_vocab(trainpath)
     S, D, NUM = run_analysis(refpath, path, utt2spkpath, trainvocab)
-    print(f"{S}, {D}, {NUM}, {(S+D)/NUM*100.}")
+    print(f"{S}, {D}, {NUM}, {(S+D)/NUM*100.:.2f}")
 

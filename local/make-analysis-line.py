@@ -10,6 +10,8 @@ import scipy.stats
 import operator
 
 def load_text(path):
+    if "rescored_text" in path:
+        return load_text_spm(path)
     texts = {}
     with open(path) as fin:
         for line in fin:
@@ -17,6 +19,20 @@ def load_text(path):
             # HACK!
             uttid = uttid.replace("é", "e")
             texts[uttid] = text
+    return texts
+
+def load_text_spm(path):
+    texts = {}
+    with open(path) as fin:
+        for line in fin:
+            uttid, *text = line.strip().split()
+            # HACK!
+            uttid = uttid.replace("é", "e")
+            text = "".join(text)
+            if text[0] =="▁":
+                text = text[1:]
+            text = text.replace("▁", " ")
+            texts[uttid] = text.split()
     return texts
 
 def format_number(number):
@@ -57,6 +73,10 @@ def wer_by_quantiles(ref_quantiles, cutoffs, hyp_dict):
     return summaries_by_quantile
 
 def get_bootci(refpath, leftpath, rightpath):
+    if "rescored_text" in leftpath:
+        leftpath = f"'local/wer_hyp_filter_spm <{leftpath}|'"
+    if "rescored_text" in rightpath:
+        rightpath = f"'local/wer_hyp_filter_spm <{rightpath}|'"
     out, err, code = sb.utils.superpowers.run_shell(f"compute-wer-bootci ark:{refpath} ark:{leftpath} ark:{rightpath}")
     credibility = lines = float(out.decode().split("\n")[2].strip().split()[-1])
     if credibility < 50.0:
@@ -117,18 +137,20 @@ def run_analysis(refpath, leftpath, rightpath, utt2spkpath):
     ref_quantiles, cutoffs = split_to_quantiles(ref, n=n_quantiles)
     left_quantile_summaries = wer_by_quantiles(ref_quantiles, cutoffs, left)
     right_quantile_summaries = wer_by_quantiles(ref_quantiles, cutoffs, right)
-    print("Left quantile WERs relative to overall left WER:")
-    print([f"{name}: {s['WER']/left_summary['WER']*100.0}" for name, s in left_quantile_summaries.items()])
-    print("Right quantile WERs, again relative:")
-    print([f"{name}: {s['WER']/right_summary['WER']*100.0}" for name, s in right_quantile_summaries.items()])
+    #print("Left quantile WERs relative to overall left WER:")
+    #print([f"{name}: {s['WER']/left_summary['WER']*100.0}" for name, s in left_quantile_summaries.items()])
+    #print("Right quantile WERs, again relative:")
+    #print([f"{name}: {s['WER']/right_summary['WER']*100.0}" for name, s in right_quantile_summaries.items()])
 
+    #print("Right total WER:", right_summary['WER'])
+    #print("Left total WER:",left_summary['WER'])
     diff = right_summary['WER']-left_summary['WER']
     rel_diff = (diff) *100 / right_summary['WER']
 
     ## START THE LINE:
     line = f"& {format_number(diff)} & {format_relative(rel_diff)}    "
     credibility = format_credib(get_bootci(refpath, leftpath, rightpath))
-    print(credibility)
+    #print(credibility)
     if len(credibility) == 4:
         line += f"& {credibility}          "
     elif len(credibility) == 5:
@@ -153,12 +175,16 @@ def run_analysis(refpath, leftpath, rightpath, utt2spkpath):
 def deal_with_hmm(path):
     if path.endswith(".txt"):
         return path
+    if "rescored_text" in path:
+        return path
     if "dev" in path:
         hp_path = path
     elif "test-all" in path:
         hp_path = path.replace("test-all", "dev-all-fixed")
     elif "test2020" in path:
-        hp_path = path.replace("test-all", "dev-all-fixed")
+        hp_path = path.replace("test2020", "dev-all-fixed")
+    elif "test-2020" in path:
+        hp_path = path.replace("test-2020", "dev-all-fixed")
     else:
         hp_path = path.replace("test", "dev")
     wipf = hp_path +"/scoring_kaldi/wer_details/wip" 
@@ -181,6 +207,8 @@ def find_refs(path):
     if "test-all" in path:
         return "fin-train20/speechbrain_2015-2020-kevat/data/parl-test-all/text", "fin-train20/speechbrain_2015-2020-kevat/data/parl-test-all/utt2spk"
     if "test2020" in path:
+        return "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2020-test/text", "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2020-test/utt2spk"
+    if "test-2020" in path:
         return "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2020-test/text", "fin-train20/kaldi_2015-2020-kevat/s5/data/parl2020-test/utt2spk"
 
 

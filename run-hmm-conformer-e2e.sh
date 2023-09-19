@@ -117,64 +117,66 @@ fi
 
 
 
-# Let's not get into the other LMs yet.
-exit 
-if [ $stage -le 29 ]; then
-  local/chain/decode.sh \
-    --acwt 1.0 --post-decode-acwt 10.0 \
-    --tree exp/chain/tree2 \
-    --hparams hyperparams/chain/New-w2w2-F.yaml \
-    --stage 2 --posteriors_from "exp/chain/New-W2V2-F//2602-2240units/decode_dev_clean_bpe.5000.varikn_acwt1.0/" \
-    --decodedir "exp/chain/New-W2V2-F/2602-2240units/decode_dev_clean_3gram_pruned_char_acwt1.0-fixt" \
-    --graphdir "exp/chain/graph2/graph_3gram_pruned_char" 
-  local/chain/decode.sh \
-    --acwt 1.0 --post-decode-acwt 10.0 \
-    --tree exp/chain/tree2 \
-    --hparams hyperparams/chain/New-w2w2-F.yaml \
-    --datadir "data/dev_other" \
-    --stage 2 --posteriors_from "exp/chain/New-W2V2-F/2602-2240units/decode_dev_other_bpe.5000.varikn_acwt1.0/" \
-    --decodedir "exp/chain/New-W2V2-F/2602-2240units/decode_dev_other_3gram_pruned_char_acwt1.0-fixt" \
-    --graphdir "exp/chain/graph2/graph_3gram_pruned_char" 
-fi
-
-if [ $stage -le 30 ]; then
-  steps/lmrescore_const_arpa.sh --scoring-opts "--hyp_filtering_cmd cat" \
-    --cmd "$basic_cmd" data/lang_3gram_pruned_char/ data/lang_4gram_char_const \
-    data/dev_clean exp/chain/New-W2V2-F/2602-2240units/decode_dev_clean_3gram_pruned_char_acwt1.0-fixt \
-    exp/chain/New-W2V2-F/2602-2240units/decode_dev_clean_4gram_char_rescored_acwt1.0-fixt
-  steps/lmrescore_const_arpa.sh --scoring-opts "--hyp_filtering_cmd cat" \
-    --cmd "$basic_cmd" data/lang_3gram_pruned_char/ data/lang_4gram_char_const \
-    data/dev_other exp/chain/New-W2V2-F/2602-2240units/decode_dev_other_3gram_pruned_char_acwt1.0-fixt \
-    exp/chain/New-W2V2-F/2602-2240units/decode_dev_other_4gram_char_rescored_acwt1.0-fixt
-fi
-
-
-if [ $stage -le 31 ]; then
-  local/chain/decode.sh \
-    --acwt 1.0 --post-decode-acwt 10.0 \
-    --hparams hyperparams/chain/New-w2w2-F.yaml \
-    --tree exp/chain/tree2 \
-    --datadir "data/test_clean" \
-    --stage 2 --posteriors_from "exp/chain/New-W2V2-F//2602-2240units/decode_test_clean_bpe.5000.varikn_acwt1.0/" \
-    --decodedir "exp/chain/New-W2V2-F/2602-2240units/decode_test_clean_3gram_pruned_char_acwt1.0-fixt" \
-    --graphdir "exp/chain/graph2/graph_3gram_pruned_char" 
-  local/chain/decode.sh \
-    --acwt 1.0 --post-decode-acwt 10.0 \
-    --hparams hyperparams/chain/New-w2w2-F.yaml \
-    --tree exp/chain/tree2 \
-    --datadir "data/test_other" \
-    --stage 2 --posteriors_from "exp/chain/New-W2V2-F/2602-2240units/decode_test_other_bpe.5000.varikn_acwt1.0/" \
-    --decodedir "exp/chain/New-W2V2-F/2602-2240units/decode_test_other_3gram_pruned_char_acwt1.0-fixt" \
-    --graphdir "exp/chain/graph2/graph_3gram_pruned_char" 
-fi
-
+# Let's get into the other LMs
 if [ $stage -le 32 ]; then
-  steps/lmrescore_const_arpa.sh --scoring-opts "--hyp_filtering_cmd cat" \
-    --cmd "$basic_cmd" data/lang_3gram_pruned_char/ data/lang_4gram_char_const \
-    data/test_clean exp/chain/New-W2V2-F/2602-2240units/decode_test_clean_3gram_pruned_char_acwt1.0-fixt \
-    exp/chain/New-W2V2-F/2602-2240units/decode_test_clean_4gram_char_rescored_acwt1.0-fixt
-  steps/lmrescore_const_arpa.sh --scoring-opts "--hyp_filtering_cmd cat" \
-    --cmd "$basic_cmd" data/lang_3gram_pruned_char/ data/lang_4gram_char_const \
-    data/test_other exp/chain/New-W2V2-F/2602-2240units/decode_test_other_3gram_pruned_char_acwt1.0-fixt \
-    exp/chain/New-W2V2-F/2602-2240units/decode_test_other_4gram_char_rescored_acwt1.0-fixt
+  local/chain/decode.sh \
+    --acwt 1.0 --post-decode-acwt 10.0 \
+    --tree exp/chain_e2e/tree \
+    --num_units 2256 \
+    --hparams "hyperparams/chain/Conformer-I-finetune-e2e.yaml" \
+    --stage 2 --posteriors_from "exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_dev_clean_bpe.5000.varikn_acwt1.0" \
+    --decodedir "exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_dev_clean_3gram_pruned_char_acwt1.0" \
+    --graphdir exp/chain_e2e/graph/graph_3gram_pruned_char
+  local/chain/decode.sh --datadir data/dev_other/ \
+    --acwt 1.0 --post-decode-acwt 10.0 \
+    --tree exp/chain_e2e/tree \
+    --num_units 2256 \
+    --hparams "hyperparams/chain/Conformer-I-finetune-e2e.yaml" \
+    --stage 2 --posteriors_from "exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_dev_other_bpe.5000.varikn_acwt1.0" \
+    --decodedir "exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_dev_other_3gram_pruned_char_acwt1.0" \
+    --graphdir exp/chain_e2e/graph/graph_3gram_pruned_char
 fi
+
+if [ $stage -le 33 ]; then
+  steps/lmrescore_const_arpa.sh --scoring-opts "--hyp_filtering_cmd cat" \
+    --cmd "$basic_cmd" data/lang_3gram_pruned_char/ data/lang_4gram_char_const \
+    data/dev_clean exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_dev_clean_3gram_pruned_char_acwt1.0 \
+    "exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_dev_clean_4gram_pruned_char_acwt1.0"
+  steps/lmrescore_const_arpa.sh --scoring-opts "--hyp_filtering_cmd cat" \
+    --cmd "$basic_cmd" data/lang_3gram_pruned_char/ data/lang_4gram_char_const \
+    data/dev_other exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_dev_other_3gram_pruned_char_acwt1.0 \
+    "exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_dev_other_4gram_pruned_char_acwt1.0"
+fi
+
+
+# Let's get into the other LMs
+if [ $stage -le 34 ]; then
+  local/chain/decode.sh \
+    --acwt 1.0 --post-decode-acwt 10.0 \
+    --tree exp/chain_e2e/tree \
+    --num_units 2256 \
+    --hparams "hyperparams/chain/Conformer-I-finetune-e2e.yaml" \
+    --stage 2 --posteriors_from "exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_test_clean_bpe.5000.varikn_acwt1.0" \
+    --decodedir "exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_test_clean_3gram_pruned_char_acwt1.0" \
+    --graphdir exp/chain_e2e/graph/graph_3gram_pruned_char
+  local/chain/decode.sh --datadir data/test_other/ \
+    --acwt 1.0 --post-decode-acwt 10.0 \
+    --tree exp/chain_e2e/tree \
+    --num_units 2256 \
+    --hparams "hyperparams/chain/Conformer-I-finetune-e2e.yaml" \
+    --stage 2 --posteriors_from "exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_test_other_bpe.5000.varikn_acwt1.0" \
+    --decodedir "exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_test_other_3gram_pruned_char_acwt1.0" \
+    --graphdir exp/chain_e2e/graph/graph_3gram_pruned_char
+fi
+
+if [ $stage -le 35 ]; then
+  steps/lmrescore_const_arpa.sh --scoring-opts "--hyp_filtering_cmd cat" \
+    --cmd "$basic_cmd" data/lang_3gram_pruned_char/ data/lang_4gram_char_const \
+    data/test_clean exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_test_clean_3gram_pruned_char_acwt1.0 \
+    "exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_test_clean_4gram_pruned_char_acwt1.0"
+  steps/lmrescore_const_arpa.sh --scoring-opts "--hyp_filtering_cmd cat" \
+    --cmd "$basic_cmd" data/lang_3gram_pruned_char/ data/lang_4gram_char_const \
+    data/test_other exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_test_other_3gram_pruned_char_acwt1.0 \
+    "exp/chain_e2e/Conformer-I-finetune/3407-${num_units}units/decode_test_other_4gram_pruned_char_acwt1.0"
+fi
+

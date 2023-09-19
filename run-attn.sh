@@ -42,3 +42,11 @@ if [ $stage -le 6 ]; then
     --hparams hyperparams/attention/CRDNN-E-contd-2.yaml --test_beam_size 8 \
     --datadir "data/test_other"
 fi
+
+
+if [ $stage -le 7 ]; then
+  local/attention/run_training.sh  \
+    --hparams hyperparams/attention/FIX-CRDNN-FF-10.yaml
+  local/attention/run_training.sh  \
+    --hparams hyperparams/attention/FIX-CRDNN-FF-10-contd.yaml
+fi

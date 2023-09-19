@@ -291,3 +291,85 @@ if [ $stage -le 34 ]; then
     --acwt 1.0 --post-decode-acwt 10.0 \
     --decodedir "exp/chain/New-CRDNN-FF-10-fixed-contd/2602-2256units/decode_test_other_bpe.5000.varikn_acwt1.0"
 fi
+
+if [ $stage -le 35 ]; then
+  local/chain/run_training.sh \
+    --hparams "hyperparams/chain/FIX-New-CRDNN-FF-10.yaml"
+  local/chain/run_training.sh \
+    --hparams "hyperparams/chain/FIX-New-CRDNN-FF-10-contd.yaml"
+fi
+
+if [ $stage -le 36 ]; then
+  local/chain/decode.sh --datadir data/dev_clean \
+    --hparams "hyperparams/chain/FIX-New-CRDNN-FF-10-contd.yaml" \
+    --acwt 1.0 --post-decode-acwt 10.0 \
+    --decodedir "exp/chain/FIX-New-CRDNN-FF-10-fixed-contd/2602-2256units/decode_dev_clean_bpe.5000.varikn_acwt1.0"
+  local/chain/decode.sh --datadir data/dev_other \
+    --hparams "hyperparams/chain/FIX-New-CRDNN-FF-10-contd.yaml" \
+    --acwt 1.0 --post-decode-acwt 10.0 \
+    --decodedir "exp/chain/FIX-New-CRDNN-FF-10-fixed-contd/2602-2256units/decode_dev_other_bpe.5000.varikn_acwt1.0"
+fi
+
+if [ $stage -le 37 ]; then
+  local/chain/decode.sh --datadir data/test_clean \
+    --hparams "hyperparams/chain/FIX-New-CRDNN-FF-10-contd.yaml" \
+    --acwt 1.0 --post-decode-acwt 10.0 \
+    --decodedir "exp/chain/FIX-New-CRDNN-FF-10-contd/2602-2256units/decode_test_clean_bpe.5000.varikn_acwt1.0"
+  local/chain/decode.sh --datadir data/test_other \
+    --hparams "hyperparams/chain/FIX-New-CRDNN-FF-10-contd.yaml" \
+    --acwt 1.0 --post-decode-acwt 10.0 \
+    --decodedir "exp/chain/FIX-New-CRDNN-FF-10-contd/2602-2256units/decode_test_other_bpe.5000.varikn_acwt1.0"
+fi
+
+if [ $stage -le 38 ]; then
+  local/chain/decode.sh \
+    --stage 2 --posteriors_from "exp/chain/FIX-New-CRDNN-FF-10-contd/2602-2256units/decode_dev_clean_bpe.5000.varikn_acwt1.0/" \
+    --decodedir "exp/chain/FIX-New-CRDNN-FF-10-contd/2602-2256units/decode_dev_clean_3gram_pruned_char_acwt1.0/" \
+    --graphdir "exp/chain/graph/graph_3gram_pruned_char" \
+    --skip_scoring true
+  local/chain/decode.sh \
+    --datadir "data/dev_other" \
+    --stage 2 --posteriors_from "exp/chain/FIX-New-CRDNN-FF-10-contd/2602-2256units/decode_dev_other_bpe.5000.varikn_acwt1.0/" \
+    --decodedir "exp/chain/FIX-New-CRDNN-FF-10-contd/2602-2256units/decode_dev_other_3gram_pruned_char_acwt1.0" \
+    --graphdir "exp/chain/graph/graph_3gram_pruned_char" \
+    --skip_scoring true 
+fi
+
+if [ $stage -le 39 ]; then
+  steps/lmrescore_const_arpa.sh --scoring-opts "--hyp_filtering_cmd cat" \
+    --cmd "$basic_cmd" data/lang_3gram_pruned_char/ data/lang_4gram_char_const \
+    data/dev_clean exp/chain/FIX-New-CRDNN-FF-10-contd/2602-2256units/decode_dev_clean_3gram_pruned_char_acwt1.0 \
+    exp/chain/FIX-New-CRDNN-FF-10-contd/2602-2256units/decode_dev_clean_4gram_char_rescored_acwt1.0
+  steps/lmrescore_const_arpa.sh --scoring-opts "--hyp_filtering_cmd cat" \
+    --cmd "$basic_cmd" data/lang_3gram_pruned_char/ data/lang_4gram_char_const \
+    data/dev_other exp/chain/FIX-New-CRDNN-FF-10-contd/2602-2256units/decode_dev_other_3gram_pruned_char_acwt1.0 \
+    exp/chain/FIX-New-CRDNN-FF-10-contd/2602-2256units/decode_dev_other_4gram_char_rescored_acwt1.0
+fi
+
+
+if [ $stage -le 40 ]; then
+  local/chain/decode.sh \
+    --datadir "data/test_clean" \
+    --stage 2 --posteriors_from "exp/chain/FIX-New-CRDNN-FF-10-contd//2602-2256units/decode_test_clean_bpe.5000.varikn_acwt1.0/" \
+    --decodedir "exp/chain/FIX-New-CRDNN-FF-10-contd/2602-2256units/decode_test_clean_3gram_pruned_char_acwt1.0" \
+    --graphdir "exp/chain/graph/graph_3gram_pruned_char" \
+    --skip_scoring true
+  local/chain/decode.sh \
+    --datadir "data/test_other" \
+    --stage 2 --posteriors_from "exp/chain/FIX-New-CRDNN-FF-10-contd/2602-2256units/decode_test_other_bpe.5000.varikn_acwt1.0/" \
+    --decodedir "exp/chain/FIX-New-CRDNN-FF-10-contd/2602-2256units/decode_test_other_3gram_pruned_char_acwt1.0" \
+    --graphdir "exp/chain/graph/graph_3gram_pruned_char" \
+    --skip_scoring true
+fi
+
+if [ $stage -le 41 ]; then
+  steps/lmrescore_const_arpa.sh --scoring-opts "--hyp_filtering_cmd cat" \
+    --cmd "$basic_cmd" data/lang_3gram_pruned_char/ data/lang_4gram_char_const \
+    data/test_clean exp/chain/FIX-New-CRDNN-FF-10-contd/2602-2256units/decode_test_clean_3gram_pruned_char_acwt1.0 \
+    exp/chain/FIX-New-CRDNN-FF-10-contd/2602-2256units/decode_test_clean_4gram_char_rescored_acwt1.0
+  steps/lmrescore_const_arpa.sh --scoring-opts "--hyp_filtering_cmd cat" \
+    --cmd "$basic_cmd" data/lang_3gram_pruned_char/ data/lang_4gram_char_const \
+    data/test_other exp/chain/FIX-New-CRDNN-FF-10-contd/2602-2256units/decode_test_other_3gram_pruned_char_acwt1.0 \
+    exp/chain/FIX-New-CRDNN-FF-10-contd/2602-2256units/decode_test_other_4gram_char_rescored_acwt1.0
+fi
+
